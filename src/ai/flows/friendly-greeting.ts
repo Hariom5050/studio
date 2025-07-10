@@ -24,7 +24,7 @@ export async function friendlyGreeting(): Promise<FriendlyGreetingOutput> {
 const prompt = ai.definePrompt({
   name: 'friendlyGreetingPrompt',
   output: {schema: FriendlyGreetingOutputSchema},
-  prompt: `You are KWS AI, a friendly and inclusive AI assistant.
+  prompt: `You are KWS Ai, a friendly and inclusive AI assistant.
 
   Generate a short, welcoming greeting for a new user to encourage them to explore the app. Include an emoji of a globe.
   Do not include any preamble. Directly state the greeting.

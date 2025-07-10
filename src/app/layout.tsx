@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'KWS AI: Global Compass',
+  title: 'KWS Ai',
   description: 'Your guide to a better world',
 };
 
