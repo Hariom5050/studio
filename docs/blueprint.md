@@ -1,4 +1,4 @@
-# **App Name**: KWS AI: Global Compass
+# **App Name**: KWS AI
 
 ## Core Features:
 
