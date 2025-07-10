@@ -19,6 +19,7 @@ const ContextualAwarenessInputSchema = z.object({
     role: z.enum(['user', 'assistant']),
     content: z.string(),
   })).optional().describe('The history of the conversation.'),
+  webSearchEnabled: z.boolean().optional().describe('Whether to enable web search for the AI.'),
 });
 export type ContextualAwarenessInput = z.infer<typeof ContextualAwarenessInputSchema>;
 
@@ -31,32 +32,6 @@ export async function contextualAwareness(input: ContextualAwarenessInput): Prom
   return contextualAwarenessFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'contextualAwarenessPrompt',
-  input: {
-    schema: ContextualAwarenessInputSchema,
-  },
-  output: {
-    schema: ContextualAwarenessOutputSchema,
-  },
-  tools: [webSearch],
-  prompt: `You are KWS Ai, a friendly and motivational guide dedicated to creating a better world. Your purpose is to inspire users to take positive actions and join a global movement for change.
-
-  Continue the conversation in a way that is helpful, engaging, and uplifting. Use the previous conversation history to inform your response and maintain a consistent, encouraging tone.
-
-  If you need to find out about recent events or information that you don't know, use the webSearch tool.
-
-  Do not repeat yourself. Always respond as KWS Ai, your friendly guide to a better world.
-
-  Conversation History:
-  {{#each conversationHistory}}
-    {{this.role}}: {{this.content}}
-  {{/each}}
-
-  User Message: {{message}}
-  KWS Ai Response: `,
-});
-
 const contextualAwarenessFlow = ai.defineFlow(
   {
     name: 'contextualAwarenessFlow',
@@ -64,6 +39,34 @@ const contextualAwarenessFlow = ai.defineFlow(
     outputSchema: ContextualAwarenessOutputSchema,
   },
   async input => {
+    const prompt = ai.definePrompt({
+      name: 'contextualAwarenessPrompt',
+      input: {
+        schema: ContextualAwarenessInputSchema,
+      },
+      output: {
+        schema: ContextualAwarenessOutputSchema,
+      },
+      tools: input.webSearchEnabled ? [webSearch] : [],
+      prompt: `You are KWS Ai, a friendly and motivational guide dedicated to creating a better world. Your purpose is to inspire users to take positive actions and join a global movement for change.
+    
+      Continue the conversation in a way that is helpful, engaging, and uplifting. Use the previous conversation history to inform your response and maintain a consistent, encouraging tone.
+    
+      {{#if webSearchEnabled}}
+      If you need to find out about recent events or information that you don't know, use the webSearch tool.
+      {{/if}}
+    
+      Do not repeat yourself. Always respond as KWS Ai, your friendly guide to a better world.
+    
+      Conversation History:
+      {{#each conversationHistory}}
+        {{this.role}}: {{this.content}}
+      {{/each}}
+    
+      User Message: {{message}}
+      KWS Ai Response: `,
+    });
+
     const {output} = await prompt(input);
     return output!;
   }

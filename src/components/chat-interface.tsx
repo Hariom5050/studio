@@ -9,10 +9,12 @@ import { encouragePledge } from "@/ai/flows/pledge-encouragement";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { SendHorizonal, LoaderCircle, RotateCw } from "lucide-react";
+import { SendHorizonal, LoaderCircle, RotateCw, Search } from "lucide-react";
 import { ChatMessage } from "./chat-message";
 import { PledgeDisplay } from "./pledge-display";
 import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -20,6 +22,7 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [pledges, setPledges] = useState<string[]>([]);
   const [pledgeOffered, setPledgeOffered] = useState(false);
+  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(true);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -118,7 +121,7 @@ export function ChatInterface() {
         const pledgeResponse = await encouragePledge({ conversationHistory: JSON.stringify(conversationHistory) });
         addMessage('assistant', pledgeResponse.encouragement, pledgeResponse.pledgeIdeas);
       } else {
-        const response = await contextualAwareness({ message: userInput, conversationHistory });
+        const response = await contextualAwareness({ message: userInput, conversationHistory, webSearchEnabled: isWebSearchEnabled });
         addMessage('assistant', response.response);
       }
     } catch (error) {
@@ -147,7 +150,7 @@ export function ChatInterface() {
       <PledgeDisplay pledges={pledges} />
 
       <div className="p-4 bg-background">
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
+        <form onSubmit={handleSubmit} className="flex items-start gap-2">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -171,6 +174,18 @@ export function ChatInterface() {
             <span className="sr-only">Reset Chat</span>
           </Button>
         </form>
+        <div className="flex items-center justify-end pt-2 space-x-2">
+            <Search className="w-4 h-4 text-muted-foreground" />
+            <Label htmlFor="web-search-toggle" className="text-sm text-muted-foreground">
+              Web Search
+            </Label>
+            <Switch
+              id="web-search-toggle"
+              checked={isWebSearchEnabled}
+              onCheckedChange={setIsWebSearchEnabled}
+              disabled={isLoading}
+            />
+          </div>
       </div>
     </div>
   );
