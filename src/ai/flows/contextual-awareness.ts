@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {webSearch} from '@/ai/tools/web-search';
 
 const ContextualAwarenessInputSchema = z.object({
   message: z.string().describe('The current user message.'),
@@ -38,9 +39,12 @@ const prompt = ai.definePrompt({
   output: {
     schema: ContextualAwarenessOutputSchema,
   },
+  tools: [webSearch],
   prompt: `You are KWS Ai, a friendly and motivational guide dedicated to creating a better world. Your purpose is to inspire users to take positive actions and join a global movement for change.
 
   Continue the conversation in a way that is helpful, engaging, and uplifting. Use the previous conversation history to inform your response and maintain a consistent, encouraging tone.
+
+  If you need to find out about recent events or information that you don't know, use the webSearch tool.
 
   Do not repeat yourself. Always respond as KWS Ai, your friendly guide to a better world.
 
