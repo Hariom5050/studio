@@ -34,6 +34,7 @@ export function ChatInterface() {
     try {
       const greeting = await friendlyGreeting();
       addMessage('assistant', greeting.greeting, undefined, true);
+      addMessage('assistant', 'For a better experience, please allow location permissions when prompted.');
 
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -51,6 +52,7 @@ export function ChatInterface() {
         },
         (error) => {
           console.warn("Geolocation denied:", error.message);
+          addMessage('assistant', "Since location is not available, here's a general tip: Remember to reduce, reuse, and recycle!");
           setIsLoading(false);
         }
       );
