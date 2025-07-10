@@ -28,8 +28,22 @@ export const webSearch = ai.defineTool(
   },
   async (input) => {
     // In a real application, you would use a search API like Google Custom Search or Bing Search.
-    // For this example, we will return a mocked result.
+    // For this example, we will return a mocked result that is relevant to the query.
     console.log(`[Web Search] Query: ${input.query}`);
+    
+    // Check if the query is about a future event to provide a more intelligent mocked response.
+    if (input.query.includes('2025')) {
+       return {
+         results: [
+           {
+             title: `No information found for "${input.query}"`,
+             link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
+             snippet: `Your search - ${input.query} - did not match any documents. This event is hypothetical and has not occurred.`
+           }
+         ]
+       }
+    }
+
     return {
       results: [
         {
