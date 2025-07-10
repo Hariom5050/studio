@@ -9,7 +9,7 @@ import { encouragePledge } from "@/ai/flows/pledge-encouragement";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { SendHorizonal, LoaderCircle } from "lucide-react";
+import { SendHorizonal, LoaderCircle, RotateCw } from "lucide-react";
 import { ChatMessage } from "./chat-message";
 import { PledgeDisplay } from "./pledge-display";
 import { useToast } from "@/hooks/use-toast";
@@ -24,11 +24,16 @@ export function ChatInterface() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const initChat = async () => {
-      setIsLoading(true);
+  const initChat = async () => {
+    setIsLoading(true);
+    setMessages([]);
+    setInput("");
+    setPledges([]);
+    setPledgeOffered(false);
+
+    try {
       const greeting = await friendlyGreeting();
-      addMessage('assistant', greeting.greeting);
+      addMessage('assistant', greeting.greeting, undefined, true);
 
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -46,12 +51,19 @@ export function ChatInterface() {
         },
         (error) => {
           console.warn("Geolocation denied:", error.message);
-          addMessage('assistant', "I can share localized tips if you enable location services! For now, here's one: Try to shop local to reduce your carbon footprint.");
           setIsLoading(false);
         }
       );
-    };
+    } catch (error) {
+      console.error("Error initializing chat:", error);
+      addMessage('assistant', "I'm having trouble getting started. Please try refreshing the page.", undefined, true);
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     initChat();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -60,11 +72,11 @@ export function ChatInterface() {
     }
   }, [messages]);
 
-  const addMessage = (role: 'user' | 'assistant', content: string, pledgeIdeas?: string[]) => {
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), role, content, pledgeIdeas },
-    ]);
+  const addMessage = (role: 'user' | 'assistant', content: string, pledgeIdeas?: string[], reset = false) => {
+    setMessages(prev => {
+      const newMessage = { id: crypto.randomUUID(), role, content, pledgeIdeas };
+      return reset ? [newMessage] : [...prev, newMessage];
+    });
   };
 
   const handlePledgeSelect = (pledge: string) => {
@@ -74,6 +86,14 @@ export function ChatInterface() {
     toast({
       title: "Pledge Made!",
       description: "You're making the world a better place.",
+    });
+  };
+
+  const handleReset = () => {
+    initChat();
+    toast({
+      title: "Chat Reset",
+      description: "The conversation has been cleared.",
     });
   };
 
@@ -114,7 +134,7 @@ export function ChatInterface() {
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} onPledgeSelect={handlePledgeSelect} />
           ))}
-          {isLoading && (
+          {isLoading && messages.length > 0 && (
             <div className="flex justify-start">
               <LoaderCircle className="w-6 h-6 animate-spin text-primary" />
             </div>
@@ -138,10 +158,15 @@ export function ChatInterface() {
                 handleSubmit(e);
               }
             }}
+            disabled={isLoading}
           />
           <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
             {isLoading ? <LoaderCircle className="w-4 h-4 animate-spin" /> : <SendHorizonal className="w-4 h-4" />}
             <span className="sr-only">Send</span>
+          </Button>
+          <Button type="button" size="icon" variant="outline" onClick={handleReset} disabled={isLoading}>
+            <RotateCw className="w-4 h-4" />
+            <span className="sr-only">Reset Chat</span>
           </Button>
         </form>
       </div>
