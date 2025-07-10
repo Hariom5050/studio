@@ -1,1 +1,8 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/localized-sustainability-tip.ts';
+import '@/ai/flows/friendly-greeting.ts';
+import '@/ai/flows/pledge-encouragement.ts';
+import '@/ai/flows/contextual-awareness.ts';
+import '@/ai/flows/conversation-guidance.ts';
