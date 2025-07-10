@@ -1,7 +1,7 @@
 // src/ai/tools/web-search.ts
 'use server';
 /**
- * @fileOverview A tool for performing a live web search using Google Custom Search API.
+ * @fileOverview A tool for performing a live web search using Serper API.
  *
  * - webSearch - A Genkit tool that performs a web search.
  */
@@ -28,12 +28,11 @@ export const webSearch = ai.defineTool(
     }),
   },
   async (input) => {
-    const apiKey = process.env.GOOGLE_CUSTOM_SEARCH_API_KEY;
-    const searchEngineId = process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID;
+    const apiKey = process.env.SERPER_API_KEY;
 
-    if (!apiKey || !searchEngineId) {
+    if (!apiKey) {
       console.error(
-        'Google Custom Search API key or Search Engine ID is not configured.'
+        'Serper API key is not configured.'
       );
       return {
         results: [
@@ -41,28 +40,34 @@ export const webSearch = ai.defineTool(
             title: 'Web Search Not Configured',
             link: '#',
             snippet:
-              'The web search tool is not configured. Please set the GOOGLE_CUSTOM_SEARCH_API_KEY and GOOGLE_CUSTOM_SEARCH_ENGINE_ID environment variables.',
+              'The web search tool is not configured. Please set the SERPER_API_KEY environment variable. You can get a free key from serper.dev.',
           },
         ],
       };
     }
 
-    const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${searchEngineId}&q=${encodeURIComponent(
-      input.query
-    )}`;
+    const url = `https://google.serper.dev/search`;
 
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-API-KEY': apiKey,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ q: input.query })
+      });
+      
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Google Custom Search API Error:', errorData);
+        console.error('Serper API Error:', errorData);
         throw new Error(
-          `API request failed with status ${response.status}: ${errorData.error.message}`
+          `API request failed with status ${response.status}: ${errorData.message || 'Unknown error'}`
         );
       }
 
       const data = await response.json();
-      const results = (data.items || []).map((item: any) => ({
+      const results = (data.organic || []).map((item: any) => ({
         title: item.title,
         link: item.link,
         snippet: item.snippet,
@@ -81,7 +86,6 @@ export const webSearch = ai.defineTool(
       return { results };
     } catch (error) {
       console.error('Error during web search:', error);
-      // Return a structured error message that the AI can understand
       return {
         results: [
           {
