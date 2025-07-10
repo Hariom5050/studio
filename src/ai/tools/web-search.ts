@@ -31,32 +31,28 @@ export const webSearch = ai.defineTool(
     // For this example, we will return a mocked result that is relevant to the query.
     console.log(`[Web Search] Query: ${input.query}`);
     
-    // Check if the query is about a future event to provide a more intelligent mocked response.
+    // Create a more dynamic, but still mocked, search result.
+    const searchResult = {
+        title: `Search Results for "${input.query}"`,
+        link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
+        snippet: `Information about "${input.query}" indicates it is a recent event. News sources are covering the topic with the latest updates available on major news networks.`
+    };
+    
+    // If the query is about a future event, provide a more intelligent mocked response.
     if (input.query.includes('2025')) {
        return {
          results: [
            {
              title: `No information found for "${input.query}"`,
              link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
-             snippet: `Your search - ${input.query} - did not match any documents. This event is hypothetical and has not occurred.`
+             snippet: `Your search - ${input.query} - did not match any documents. This appears to be a hypothetical event that has not yet occurred.`
            }
          ]
        }
     }
 
     return {
-      results: [
-        {
-          title: 'Project IDX Announcements - Google I/O 2024',
-          link: 'https://developers.google.com/idx/release-notes',
-          snippet: 'Project IDX now includes new features like emulator previews for iOS and Android, templates for a variety of popular frameworks, and enhanced AI capabilities to improve developer workflow.',
-        },
-        {
-          title: 'AI in 2024: Key Trends and Developments',
-          link: 'https://example.com/ai-trends-2024',
-          snippet: 'The year 2024 has seen rapid advancements in generative AI, with models becoming more powerful and accessible. Key trends include multi-modal models, on-device AI, and the rise of AI agents that can perform complex tasks.',
-        }
-      ],
+      results: [searchResult],
     };
   }
 );
