@@ -54,16 +54,6 @@ export function ChatHistory() {
 
   useEffect(() => {
     loadConversations();
-    // We listen to the storage event to keep the history in sync across tabs.
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.startsWith(CONVERSATION_KEY_PREFIX)) {
-        loadConversations();
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
   }, [loadConversations, activeConversationId]);
 
   const handleNewChat = () => {
