@@ -103,9 +103,19 @@ export function ChatHistory() {
     setIsEditMode(false);
 
     if (wasActiveChatDeleted) {
-        const remainingConversations = conversations.filter(c => !selectedConversations.has(c.id));
-        if (remainingConversations.length > 0) {
-            router.push(`/?id=${remainingConversations[0].id}`);
+        const allKeys = Object.keys(localStorage).filter(key => key.startsWith(CONVERSATION_KEY_PREFIX));
+        if (allKeys.length > 0) {
+            allKeys.sort((a, b) => {
+                try {
+                    const convoA = JSON.parse(localStorage.getItem(a) as string);
+                    const convoB = JSON.parse(localStorage.getItem(b) as string);
+                    return new Date(convoB.timestamp).getTime() - new Date(convoA.timestamp).getTime();
+                } catch {
+                    return 0;
+                }
+            });
+            const latestId = allKeys[0].replace(CONVERSATION_KEY_PREFIX, '');
+            router.push(`/?id=${latestId}`);
         } else {
             const newId = crypto.randomUUID();
             router.push(`/?id=${newId}`);

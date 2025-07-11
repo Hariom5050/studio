@@ -29,7 +29,6 @@ export function ChatInterface() {
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -91,7 +90,7 @@ export function ChatInterface() {
             } catch (error) {
                 console.error("Error getting sustainability tip:", error);
                 setMessages(prev => {
-                    const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "I couldn't fetch a local tip, but here's a general one: Remember to reduce, reuse, and recycle!" }];
+                    const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" }];
                     saveConversation(newConvoId, updated, []);
                     return updated;
                 });
@@ -102,7 +101,7 @@ export function ChatInterface() {
         (error) => {
             console.warn("Geolocation denied:", error.message);
             setMessages(prev => {
-                const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "Since location is not available, here's a general one: Remember to reduce, reuse, and recycle!" }];
+                const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" }];
                 saveConversation(newConvoId, updated, []);
                 return updated;
             });
@@ -246,7 +245,7 @@ export function ChatInterface() {
   return (
     <div className="flex flex-col flex-1 w-full h-full max-w-2xl mx-auto">
       <ScrollArea className="flex-1 p-4 pr-6" viewportRef={viewportRef}>
-        <div className="space-y-6" ref={scrollAreaRef}>
+        <div className="space-y-6">
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} onPledgeSelect={handlePledgeSelect} />
           ))}
