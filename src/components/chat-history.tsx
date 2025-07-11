@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, X } from 'lucide-react';
 import type { Conversation } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
@@ -27,6 +27,7 @@ export function ChatHistory() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,17 +58,20 @@ export function ChatHistory() {
   }, [loadConversations, activeConversationId]);
 
   const handleNewChat = () => {
+    setIsEditMode(false);
     setSelectedConversations(new Set());
-    // The chat interface will handle creating the new ID and navigating
     router.push('/');
   };
   
   const handleSelectChat = (id: string) => {
-    router.push(`/?id=${id}`);
+    if (isEditMode) {
+        handleToggleSelection(id);
+    } else {
+        router.push(`/?id=${id}`);
+    }
   };
 
-  const handleToggleSelection = (id: string, e: React.MouseEvent | React.KeyboardEvent) => {
-    e.stopPropagation();
+  const handleToggleSelection = (id: string) => {
     const newSelection = new Set(selectedConversations);
     if (newSelection.has(id)) {
       newSelection.delete(id);
@@ -92,16 +96,19 @@ export function ChatHistory() {
       localStorage.removeItem(`${CONVERSATION_KEY_PREFIX}${id}`);
     });
 
-    // Check if the currently active chat was deleted
     if (activeConversationId && selectedConversations.has(activeConversationId)) {
-        // If so, navigate to a new chat page to "comeback"
         router.push('/');
     }
     
-    // Manually trigger a reload of conversations state from the updated local storage
     loadConversations();
     setSelectedConversations(new Set());
     setDeleteDialogOpen(false);
+    setIsEditMode(false);
+  }
+
+  const handleCancelEditMode = () => {
+    setIsEditMode(false);
+    setSelectedConversations(new Set());
   }
 
   return (
@@ -111,11 +118,32 @@ export function ChatHistory() {
           <PlusCircle className="w-4 h-4 mr-2" />
           New Chat
         </Button>
-        {selectedConversations.size > 0 && (
+        {isEditMode ? (
+            <Button variant="ghost" size="icon" onClick={handleCancelEditMode}>
+                <X className="w-4 h-4" />
+            </Button>
+        ) : (
+            <Button variant="ghost" size="icon" onClick={() => setIsEditMode(true)}>
+                <Trash2 className="w-4 h-4" />
+            </Button>
+        )}
+      </div>
+
+       {isEditMode && conversations.length > 0 && (
+        <div className="flex items-center px-2 py-2 mb-2 space-x-2 border rounded-md">
+            <Checkbox
+              id="select-all"
+              checked={selectedConversations.size > 0 && selectedConversations.size === conversations.length}
+              onCheckedChange={handleSelectAll}
+            />
+            <Label htmlFor="select-all" className="flex-1 text-sm font-medium">
+              {selectedConversations.size > 0 ? `${selectedConversations.size} selected` : 'Select All'}
+            </Label>
+            {selectedConversations.size > 0 && (
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon">
-                        <Trash2 className="w-4 h-4" />
+                    <Button variant="destructive" size="sm">
+                        Delete
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -132,18 +160,6 @@ export function ChatHistory() {
                 </AlertDialogContent>
             </AlertDialog>
         )}
-      </div>
-
-       {conversations.length > 0 && (
-        <div className="flex items-center px-2 py-2 mb-2 space-x-2 border rounded-md">
-            <Checkbox
-              id="select-all"
-              checked={selectedConversations.size > 0 && selectedConversations.size === conversations.length}
-              onCheckedChange={handleSelectAll}
-            />
-            <Label htmlFor="select-all" className="flex-1 text-sm font-medium">
-              {selectedConversations.size > 0 ? `${selectedConversations.size} selected` : 'Select All'}
-            </Label>
         </div>
        )}
 
@@ -153,28 +169,31 @@ export function ChatHistory() {
             <div
               key={convo.id}
               className={cn(
-                "w-full flex items-center gap-2 pr-2 rounded-md transition-colors cursor-pointer group",
-                convo.id === activeConversationId ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+                "w-full flex items-center gap-2 rounded-md transition-colors cursor-pointer group",
+                !isEditMode && convo.id === activeConversationId ? "bg-accent text-accent-foreground" : "hover:bg-muted",
+                isEditMode && selectedConversations.has(convo.id) ? "bg-muted" : ""
               )}
               onClick={() => handleSelectChat(convo.id)}
             >
-              <Checkbox
-                className={cn(
-                    "ml-2 my-2 transition-opacity",
-                    convo.id === activeConversationId ? "border-accent-foreground" : "",
-                    selectedConversations.has(convo.id) ? "opacity-100" : "opacity-40 group-hover:opacity-100"
-                )}
-                checked={selectedConversations.has(convo.id)}
-                onClick={(e) => handleToggleSelection(convo.id, e)}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        handleToggleSelection(convo.id, e)
-                    }
-                }}
-              />
+              {isEditMode && (
+                <Checkbox
+                    className={cn(
+                        "ml-2 my-2 transition-opacity",
+                        selectedConversations.has(convo.id) ? "opacity-100" : "opacity-40 group-hover:opacity-100"
+                    )}
+                    checked={selectedConversations.has(convo.id)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleSelection(convo.id);
+                    }}
+                />
+              )}
               <Button
                 variant="ghost"
-                className="flex-1 w-full h-auto px-2 py-2 text-left justify-start whitespace-normal bg-transparent hover:bg-transparent"
+                className={cn(
+                  "flex-1 w-full h-auto px-2 py-2 text-left justify-start whitespace-normal bg-transparent hover:bg-transparent",
+                  !isEditMode ? "pl-4" : ""
+                )}
               >
                 {convo.title}
               </Button>
