@@ -61,9 +61,13 @@ export const webSearch = ai.defineTool(
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Serper API Error:', errorData);
-        throw new Error(
-          `API request failed with status ${response.status}: ${errorData.message || 'Unknown error'}`
-        );
+        return {
+          results: [{
+            title: "Web Search Failed",
+            link: "#",
+            snippet: `The web search API returned an error: ${errorData.message || 'Unknown error'}`
+          }]
+        }
       }
 
       const data = await response.json();
