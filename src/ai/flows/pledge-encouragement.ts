@@ -52,7 +52,19 @@ const encouragePledgeFlow = ai.defineFlow(
     outputSchema: EncouragePledgeOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+      const {output} = await prompt(input);
+      return output!;
+    } catch (error) {
+      console.error("Error in encouragePledgeFlow:", error);
+      return {
+        encouragement: "It's great that you're thinking about making a positive impact! What's one small thing you could do today?",
+        pledgeIdeas: [
+          "Use a reusable water bottle.",
+          "Share a kind word with someone.",
+          "Spend 5 minutes learning about a different culture."
+        ]
+      };
+    }
   }
 );

@@ -59,7 +59,12 @@ const summarizeConversationFlow = ai.defineFlow(
     outputSchema: SummarizeConversationOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+      const {output} = await prompt(input);
+      return output!;
+    } catch (error) {
+      console.error("Error in summarizeConversationFlow:", error);
+      return { title: "Chat" };
+    }
   }
 );

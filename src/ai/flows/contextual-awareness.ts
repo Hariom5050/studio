@@ -77,9 +77,14 @@ const contextualAwarenessFlow = ai.defineFlow(
     outputSchema: ContextualAwarenessOutputSchema,
   },
   async (input) => {
-    const {output} = await contextualAwarenessPrompt(input, {
-      tools: input.webSearchEnabled ? [webSearch] : [],
-    });
-    return output!;
+    try {
+      const {output} = await contextualAwarenessPrompt(input, {
+        tools: input.webSearchEnabled ? [webSearch] : [],
+      });
+      return output!;
+    } catch (error) {
+      console.error("Error in contextualAwarenessFlow:", error);
+      return { response: "I'm having a little trouble connecting right now. Please try again in a moment." };
+    }
   }
 );

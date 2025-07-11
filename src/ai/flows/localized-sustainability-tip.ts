@@ -55,7 +55,12 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
     outputSchema: LocalizedSustainabilityTipOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+      const {output} = await prompt(input);
+      return output!;
+    } catch (error) {
+      console.error("Error in localizedSustainabilityTipFlow:", error);
+      return { tip: "I couldn't fetch a local tip, but here's a general one: Remember to reduce, reuse, and recycle!" };
+    }
   }
 );
