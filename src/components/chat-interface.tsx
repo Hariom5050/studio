@@ -59,8 +59,8 @@ export function ChatInterface() {
        timestamp: new Date().toISOString(),
    };
    localStorage.setItem(`${CONVERSATION_KEY_PREFIX}${id}`, JSON.stringify(conversation));
-   // Dispatch a storage event so other tabs can sync, but our own app will rely on state/prop updates
-   window.dispatchEvent(new StorageEvent('storage', { key: `${CONVERSATION_KEY_PREFIX}${id}`, storageArea: localStorage }));
+   // Manually dispatch a storage event so the history component can update
+   window.dispatchEvent(new StorageEvent('storage', { key: `${CONVERSATION_KEY_PREFIX}${id}` }));
   }, [pledges]);
 
 

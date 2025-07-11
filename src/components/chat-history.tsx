@@ -55,15 +55,6 @@ export function ChatHistory() {
 
   useEffect(() => {
     loadConversations();
-    const handleStorageChange = (e: StorageEvent) => {
-        if (e.key && e.key.startsWith(CONVERSATION_KEY_PREFIX)) {
-            loadConversations();
-        }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-        window.removeEventListener('storage', handleStorageChange);
-    };
   }, [loadConversations, activeConversationId]);
 
   const handleNewChat = () => {
@@ -105,13 +96,15 @@ export function ChatHistory() {
     idsToDelete.forEach(id => {
       localStorage.removeItem(`${CONVERSATION_KEY_PREFIX}${id}`);
     });
+    
+    loadConversations(); // Reload the conversation list from storage
 
     if (activeConversationId && selectedConversations.has(activeConversationId)) {
+        // If the active chat was deleted, start a new one
         const newId = crypto.randomUUID();
         router.push(`/?id=${newId}`);
     }
     
-    loadConversations();
     setSelectedConversations(new Set());
     setDeleteDialogOpen(false);
     setIsEditMode(false);
