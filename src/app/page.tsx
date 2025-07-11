@@ -32,7 +32,7 @@ export default function Home() {
             <SidebarTrigger className="md:hidden" />
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
-                KWS Ai Chat
+                KWS Ai
               </h1>
               <p className="text-sm text-muted-foreground">Your guide to a better world.</p>
             </div>
