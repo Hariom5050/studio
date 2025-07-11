@@ -42,7 +42,12 @@ export function ChatHistory({ activeConversationId }: { activeConversationId: st
 
   useEffect(() => {
     loadConversations();
-  }, [activeConversationId, loadConversations]);
+    // Add a storage event listener to update history across tabs/windows
+    window.addEventListener('storage', loadConversations);
+    return () => {
+      window.removeEventListener('storage', loadConversations);
+    };
+  }, [loadConversations]);
 
   const handleNewChat = () => {
     router.push('/');
@@ -53,15 +58,16 @@ export function ChatHistory({ activeConversationId }: { activeConversationId: st
   };
 
   const handleDeleteChat = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent navigating to the chat
+    e.stopPropagation();
     localStorage.removeItem(`${CONVERSATION_KEY_PREFIX}${id}`);
     
-    // If the active chat is deleted, navigate to a new chat
     if (activeConversationId === id) {
       router.push('/');
-    } else {
-      loadConversations();
+      // A hard reload might be necessary if state isn't resetting properly across components.
+      // window.location.href = '/'; 
     }
+    // Manually trigger a re-load of conversations after deletion
+    loadConversations();
   }
 
   return (

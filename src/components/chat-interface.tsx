@@ -34,7 +34,7 @@ export function ChatInterface() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const isTitleGenerating = useRef(false);
-  
+
   const saveConversation = useCallback((id: string, updatedMessages: Message[], updatedPledges: string[], title?: string) => {
     if (!id) return;
     let currentTitle = title;
@@ -43,7 +43,7 @@ export function ChatInterface() {
     if (existingConvoRaw) {
        try {
            const existingConvo = JSON.parse(existingConvoRaw);
-           if (existingConvo.title && existingConvo.title !== 'New Conversation') {
+           if (existingConvo.title && !title) {
                currentTitle = existingConvo.title;
            }
        } catch (error) {
@@ -59,22 +59,12 @@ export function ChatInterface() {
        timestamp: new Date().toISOString(),
    };
    localStorage.setItem(`${CONVERSATION_KEY_PREFIX}${id}`, JSON.stringify(conversation));
+   window.dispatchEvent(new Event('storage')); // Notify history component of changes
   }, []);
-
-  const addMessage = useCallback((role: 'user' | 'assistant', content: string, pledgeIdeas?: string[]) => {
-    setMessages(prev => {
-      const newMessage: Message = { id: crypto.randomUUID(), role, content, pledgeIdeas };
-      const newMessages = [...prev, newMessage];
-      if (currentConversationId) {
-        saveConversation(currentConversationId, newMessages, pledges);
-      }
-      return newMessages;
-    });
-  }, [currentConversationId, pledges, saveConversation]);
-
 
   const startNewChat = useCallback(async (newConvoId: string) => {
       setIsLoading(true);
+      setCurrentConversationId(newConvoId);
       
       try {
         const greeting = "Hi! I'm KWS AI – your guide to a better world 🌍";
@@ -121,42 +111,43 @@ export function ChatInterface() {
         );
     } catch (error) {
         console.error("Error initializing chat:", error);
-        addMessage('assistant', "I'm having trouble getting started. Please try refreshing the page.");
+        setMessages(prev => {
+            const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "I'm having trouble getting started. Please try refreshing the page." }];
+            saveConversation(newConvoId, updated, []);
+            return updated;
+        });
         setIsLoading(false);
     }
-  }, [addMessage, saveConversation]);
-
+  }, [saveConversation]);
 
   useEffect(() => {
     const conversationIdFromUrl = searchParams.get('id');
 
-    if (!conversationIdFromUrl) {
-      // If no ID in URL, create one and redirect. This should only happen once on first load.
-      router.replace(`/?id=${crypto.randomUUID()}`, { scroll: false });
-      return;
-    }
-
-    if (conversationIdFromUrl !== currentConversationId) {
-        setCurrentConversationId(conversationIdFromUrl);
+    if (conversationIdFromUrl) {
+      if (conversationIdFromUrl !== currentConversationId) {
         const storedConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${conversationIdFromUrl}`);
-
         if (storedConvoRaw) {
-            try {
-                const storedConvo: Conversation = JSON.parse(storedConvoRaw);
-                setMessages(storedConvo.messages);
-                setPledges(storedConvo.pledges || []);
-                setPledgeOffered(storedConvo.messages.some(m => m.pledgeIdeas));
-                setIsLoading(false);
-            } catch (error) {
-                console.error("Failed to parse conversation, starting new chat.", error);
-                startNewChat(conversationIdFromUrl);
-            }
+          try {
+            const storedConvo: Conversation = JSON.parse(storedConvoRaw);
+            setCurrentConversationId(storedConvo.id);
+            setMessages(storedConvo.messages);
+            setPledges(storedConvo.pledges || []);
+            setPledgeOffered(storedConvo.messages.some(m => m.pledgeIdeas));
+          } catch (error) {
+            console.error("Failed to parse conversation, starting new chat.", error);
+            const newId = crypto.randomUUID();
+            router.replace(`/?id=${newId}`, { scroll: false });
+          }
         } else {
-            // No stored conversation, so it's a new chat.
-            startNewChat(conversationIdFromUrl);
+          startNewChat(conversationIdFromUrl);
         }
+      }
+    } else {
+      const newId = crypto.randomUUID();
+      router.replace(`/?id=${newId}`, { scroll: false });
     }
   }, [searchParams, currentConversationId, router, startNewChat]);
+
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -166,6 +157,7 @@ export function ChatInterface() {
 
 
   const handlePledgeSelect = (pledge: string) => {
+    if (!currentConversationId) return;
     const updatedPledges = [...pledges, pledge];
     setPledges(updatedPledges);
     const updatedMessages = messages.filter(m => !m.pledgeIdeas);
@@ -175,9 +167,8 @@ export function ChatInterface() {
     const finalMessages = [...updatedMessages, confirmationMessage];
     setMessages(finalMessages);
     
-    if (currentConversationId) {
-      saveConversation(currentConversationId, finalMessages, updatedPledges);
-    }
+    saveConversation(currentConversationId, finalMessages, updatedPledges);
+
     toast({
       title: "Pledge Made!",
       description: "You're making the world a better place.",
@@ -186,12 +177,20 @@ export function ChatInterface() {
 
   const generateTitle = async (convoId: string, convoMessages: Message[]) => {
     if (isTitleGenerating.current) return;
+    const existingConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${convoId}`);
+    if (existingConvoRaw) {
+       try {
+           const existingConvo = JSON.parse(existingConvoRaw);
+           if (existingConvo.title && existingConvo.title !== 'New Conversation') {
+               return; // Title already exists
+           }
+       } catch (error) { /* continue */ }
+    }
+    
     isTitleGenerating.current = true;
     try {
         const { title } = await summarizeConversation(convoMessages);
         saveConversation(convoId, convoMessages, pledges, title);
-        // We trigger a re-render of the history by navigating, which ensures the title updates
-        router.replace(`/?id=${convoId}`, { scroll: false });
     } catch (error) {
         console.error("Failed to generate conversation title", error);
         saveConversation(convoId, convoMessages, pledges, "Chat");
@@ -216,6 +215,7 @@ export function ChatInterface() {
 
     const userMessageCount = newMessages.filter(m => m.role === 'user').length;
     
+    // Generate title after the first user message.
     if (userMessageCount === 1) {
         generateTitle(currentConversationId, newMessages);
     }
