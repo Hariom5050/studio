@@ -30,6 +30,7 @@ export function ChatInterface() {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -59,8 +60,6 @@ export function ChatInterface() {
        timestamp: new Date().toISOString(),
    };
    localStorage.setItem(`${CONVERSATION_KEY_PREFIX}${id}`, JSON.stringify(conversation));
-   // Manually dispatch a storage event so the history component can update
-   window.dispatchEvent(new StorageEvent('storage', { key: `${CONVERSATION_KEY_PREFIX}${id}` }));
   }, [pledges]);
 
 
@@ -129,16 +128,13 @@ export function ChatInterface() {
             setInput('');
           } catch (error) {
             console.error("Failed to parse conversation, starting new chat.", error);
-            // If parsing fails, it's a corrupted entry, so we start fresh with this ID.
             startNewChat(conversationIdFromUrl);
           }
         } else {
-          // No conversation with this ID exists, so start a new one.
           startNewChat(conversationIdFromUrl);
         }
       }
     } else {
-      // No ID in URL, so create a new one and redirect.
       const newId = crypto.randomUUID();
       router.replace(`/?id=${newId}`);
     }
@@ -146,8 +142,8 @@ export function ChatInterface() {
 
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    if (viewportRef.current) {
+      viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -211,7 +207,6 @@ export function ChatInterface() {
 
     const userMessageCount = newMessages.filter(m => m.role === 'user').length;
     
-    // Generate title after the first user message.
     if (userMessageCount === 1) {
         generateTitle(currentConversationId, newMessages);
     }
@@ -239,7 +234,7 @@ export function ChatInterface() {
 
     } catch (error) {
       console.error("Error with AI flow:", error);
-      const errorMessage: Message = { id: crypto.randomUUID(), role: 'assistant', content: "I'm having a little trouble connecting. Please try again in a moment." };
+      const errorMessage: Message = { id: crypto.randomUUID(), role: 'assistant', content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
       const finalMessages = [...newMessages, errorMessage];
       setMessages(finalMessages);
       saveConversation(currentConversationId, finalMessages, pledges);
@@ -250,8 +245,8 @@ export function ChatInterface() {
 
   return (
     <div className="flex flex-col flex-1 w-full h-full max-w-2xl mx-auto">
-      <ScrollArea className="flex-1 p-4 pr-6" ref={scrollAreaRef}>
-        <div className="space-y-6">
+      <ScrollArea className="flex-1 p-4 pr-6" viewportRef={viewportRef}>
+        <div className="space-y-6" ref={scrollAreaRef}>
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} onPledgeSelect={handlePledgeSelect} />
           ))}

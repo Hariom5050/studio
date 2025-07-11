@@ -1,3 +1,4 @@
+
 // src/ai/flows/summarize-conversation.ts
 'use server';
 /**
@@ -64,7 +65,7 @@ const summarizeConversationFlow = ai.defineFlow(
       return output!;
     } catch (error) {
       console.error("Error in summarizeConversationFlow:", error);
-      return { title: "New Chat" };
+      return { title: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
     }
   }
 );

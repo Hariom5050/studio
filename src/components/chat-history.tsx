@@ -92,22 +92,27 @@ export function ChatHistory() {
   }
 
   const handleDeleteSelected = () => {
-    const idsToDelete = Array.from(selectedConversations);
-    idsToDelete.forEach(id => {
+    selectedConversations.forEach(id => {
       localStorage.removeItem(`${CONVERSATION_KEY_PREFIX}${id}`);
     });
     
-    loadConversations(); // Reload the conversation list from storage
-
-    if (activeConversationId && selectedConversations.has(activeConversationId)) {
-        // If the active chat was deleted, start a new one
-        const newId = crypto.randomUUID();
-        router.push(`/?id=${newId}`);
-    }
+    const wasActiveChatDeleted = activeConversationId && selectedConversations.has(activeConversationId);
     
     setSelectedConversations(new Set());
     setDeleteDialogOpen(false);
     setIsEditMode(false);
+
+    if (wasActiveChatDeleted) {
+        const remainingConversations = conversations.filter(c => !selectedConversations.has(c.id));
+        if (remainingConversations.length > 0) {
+            router.push(`/?id=${remainingConversations[0].id}`);
+        } else {
+            const newId = crypto.randomUUID();
+            router.push(`/?id=${newId}`);
+        }
+    } else {
+        loadConversations();
+    }
   }
 
   const handleCancelEditMode = () => {

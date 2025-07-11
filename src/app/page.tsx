@@ -54,10 +54,21 @@ function ChatPageContent() {
   );
 }
 
+function ChatPageFallback() {
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="flex flex-col items-center gap-2">
+        <Globe className="w-12 h-12 text-primary animate-pulse" />
+        <p className="text-lg font-semibold text-muted-foreground">Loading KWS Ai...</p>
+      </div>
+    </div>
+  );
+}
+
 
 export default function Home() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<ChatPageFallback />}>
       <ChatPageContent />
     </Suspense>
   )
