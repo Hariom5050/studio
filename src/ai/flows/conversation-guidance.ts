@@ -36,7 +36,7 @@ const prompt = ai.definePrompt({
   name: 'conversationGuidancePrompt',
   input: {schema: ConversationGuidanceInputSchema},
   output: {schema: ConversationGuidanceOutputSchema},
-  prompt: `You are a helpful and friendly AI assistant that guides conversations on important topics.
+  prompt: `You are KWS Ai, a helpful and friendly AI assistant that guides conversations on important topics.
 
   The current topic is: {{{topic}}}
 

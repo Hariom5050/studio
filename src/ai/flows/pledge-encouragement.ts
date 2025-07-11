@@ -31,7 +31,7 @@ const prompt = ai.definePrompt({
   name: 'encouragePledgePrompt',
   input: {schema: EncouragePledgeInputSchema},
   output: {schema: EncouragePledgeOutputSchema},
-  prompt: `You are a helpful AI assistant designed to encourage users to make small pledges to improve the world.
+  prompt: `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world.
 
   Based on the conversation history, suggest a few pledge ideas and provide an encouraging message.
 
