@@ -59,8 +59,10 @@ export function ChatInterface() {
        timestamp: new Date().toISOString(),
    };
    localStorage.setItem(`${CONVERSATION_KEY_PREFIX}${id}`, JSON.stringify(conversation));
+   // Dispatch a storage event so other tabs can sync, but our own app will rely on state/prop updates
    window.dispatchEvent(new StorageEvent('storage', { key: `${CONVERSATION_KEY_PREFIX}${id}`, storageArea: localStorage }));
   }, [pledges]);
+
 
   const startNewChat = useCallback((newConvoId: string) => {
     setIsLoading(true);
@@ -127,13 +129,16 @@ export function ChatInterface() {
             setInput('');
           } catch (error) {
             console.error("Failed to parse conversation, starting new chat.", error);
+            // If parsing fails, it's a corrupted entry, so we start fresh with this ID.
             startNewChat(conversationIdFromUrl);
           }
         } else {
+          // No conversation with this ID exists, so start a new one.
           startNewChat(conversationIdFromUrl);
         }
       }
     } else {
+      // No ID in URL, so create a new one and redirect.
       const newId = crypto.randomUUID();
       router.replace(`/?id=${newId}`);
     }

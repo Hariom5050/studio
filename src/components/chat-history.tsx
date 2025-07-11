@@ -54,21 +54,22 @@ export function ChatHistory() {
 
   useEffect(() => {
     loadConversations();
+    // We listen to the storage event to keep the history in sync across tabs.
     const handleStorageChange = (e: StorageEvent) => {
-        if (e.key && e.key.startsWith(CONVERSATION_KEY_PREFIX)) {
-            loadConversations();
-        }
+      if (e.key?.startsWith(CONVERSATION_KEY_PREFIX)) {
+        loadConversations();
+      }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => {
-        window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
-  }, [loadConversations]);
+  }, [loadConversations, activeConversationId]);
 
   const handleNewChat = () => {
     setSelectedConversations(new Set());
-    const newId = crypto.randomUUID();
-    router.push(`/?id=${newId}`);
+    // The chat interface will handle creating the new ID and navigating
+    router.push('/');
   };
   
   const handleSelectChat = (id: string) => {
@@ -101,22 +102,16 @@ export function ChatHistory() {
       localStorage.removeItem(`${CONVERSATION_KEY_PREFIX}${id}`);
     });
 
+    // Check if the currently active chat was deleted
     if (activeConversationId && selectedConversations.has(activeConversationId)) {
-      router.push('/');
+        // If so, navigate to a new chat page to "comeback"
+        router.push('/');
     }
     
+    // Manually trigger a reload of conversations state from the updated local storage
     loadConversations();
     setSelectedConversations(new Set());
     setDeleteDialogOpen(false);
-    
-    // This forces a refresh of the chat list for other components listening to storage events
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: `${CONVERSATION_KEY_PREFIX}batch_delete`,
-      oldValue: null,
-      newValue: null,
-      url: window.location.href,
-      storageArea: localStorage,
-    }));
   }
 
   return (
