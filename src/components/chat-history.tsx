@@ -29,7 +29,14 @@ export function ChatHistory() {
 
   const loadConversations = () => {
     const keys = Object.keys(localStorage).filter(key => key.startsWith(CONVERSATION_KEY_PREFIX));
-    const convos = keys.map(key => JSON.parse(localStorage.getItem(key) as string) as Conversation);
+    const convos = keys.map(key => {
+        try {
+            return JSON.parse(localStorage.getItem(key) as string) as Conversation;
+        } catch {
+            return null;
+        }
+    }).filter((c): c is Conversation => c !== null);
+
     convos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     setConversations(convos);
   };
@@ -54,10 +61,12 @@ export function ChatHistory() {
   const handleDeleteChat = (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent navigating to the chat
     localStorage.removeItem(`${CONVERSATION_KEY_PREFIX}${id}`);
-    loadConversations();
+    
     // If the active chat is deleted, navigate to a new chat
     if (activeConversationId === id) {
       router.push('/');
+    } else {
+      loadConversations();
     }
   }
 
@@ -74,7 +83,7 @@ export function ChatHistory() {
               <Button
                 variant="ghost"
                 className={cn(
-                    "w-full justify-start text-left h-auto whitespace-normal",
+                    "w-full justify-start text-left h-auto whitespace-normal pr-8",
                     convo.id === activeConversationId && "bg-accent text-accent-foreground"
                 )}
                 onClick={() => handleSelectChat(convo.id)}

@@ -6,6 +6,7 @@ import { friendlyGreeting } from "@/ai/flows/friendly-greeting";
 import { getLocalizedSustainabilityTip } from "@/ai/flows/localized-sustainability-tip";
 import { contextualAwareness } from "@/ai/flows/contextual-awareness";
 import { encouragePledge } from "@/ai/flows/pledge-encouragement";
+import { summarizeConversation } from "@/ai/flows/summarize-conversation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export function ChatInterface() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const conversationId = searchParams.get('id');
+  const isTitleGenerating = useRef(false);
 
   const initChat = async (convoId: string | null) => {
     setIsLoading(true);
@@ -42,14 +44,19 @@ export function ChatInterface() {
     
     if (convoId) {
       // Load existing conversation
-      const storedConvo = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${convoId}`);
-      if (storedConvo) {
-        const conversation: Conversation = JSON.parse(storedConvo);
-        setMessages(conversation.messages);
-        setPledges(conversation.pledges || []);
-        setCurrentConversationId(convoId);
-        setIsLoading(false);
-        return;
+      try {
+        const storedConvo = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${convoId}`);
+        if (storedConvo) {
+          const conversation: Conversation = JSON.parse(storedConvo);
+          setMessages(conversation.messages);
+          setPledges(conversation.pledges || []);
+          setCurrentConversationId(convoId);
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to load conversation", error);
+        // Fallback to new chat if loading fails
       }
     }
 
@@ -61,8 +68,8 @@ export function ChatInterface() {
     
     try {
       const greeting = await friendlyGreeting();
-      addMessage(newConvoId, 'assistant', greeting.greeting, undefined, true);
-      addMessage(newConvoId, 'assistant', 'For a better experience, please allow location permissions when prompted.');
+      addMessage('assistant', greeting.greeting, undefined, true);
+      addMessage('assistant', 'For a better experience, please allow location permissions when prompted.');
 
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -70,23 +77,23 @@ export function ChatInterface() {
           const location = `lat: ${latitude}, lon: ${longitude}`;
           try {
             const tip = await getLocalizedSustainabilityTip({ location });
-            addMessage(newConvoId, 'assistant', tip.tip);
+            addMessage('assistant', tip.tip);
           } catch (error) {
             console.error("Error getting sustainability tip:", error);
-            addMessage(newConvoId, 'assistant', "I couldn't fetch a local tip, but here's a general one: Remember to reduce, reuse, and recycle!");
+            addMessage('assistant', "I couldn't fetch a local tip, but here's a general one: Remember to reduce, reuse, and recycle!");
           } finally {
             setIsLoading(false);
           }
         },
         (error) => {
           console.warn("Geolocation denied:", error.message);
-          addMessage(newConvoId, 'assistant', "Since location is not available, here's a general tip: Remember to reduce, reuse, and recycle!");
+          addMessage('assistant', "Since location is not available, here's a general tip: Remember to reduce, reuse, and recycle!");
           setIsLoading(false);
         }
       );
     } catch (error) {
       console.error("Error initializing chat:", error);
-      addMessage(newConvoId, 'assistant', "I'm having trouble getting started. Please try refreshing the page.", undefined, true);
+      addMessage('assistant', "I'm having trouble getting started. Please try refreshing the page.", undefined, true);
       setIsLoading(false);
     }
   };
@@ -102,11 +109,26 @@ export function ChatInterface() {
     }
   }, [messages]);
 
-  const saveConversation = (id: string, updatedMessages: Message[], updatedPledges: string[]) => {
+  const saveConversation = (id: string, updatedMessages: Message[], updatedPledges: string[], title?: string) => {
      if (!id) return;
+     let currentTitle = title;
+     
+     // Check if conversation already exists to preserve its title
+     const existingConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${id}`);
+     if (existingConvoRaw) {
+        try {
+            const existingConvo = JSON.parse(existingConvoRaw);
+            if (existingConvo.title) {
+                currentTitle = existingConvo.title;
+            }
+        } catch (error) {
+            console.error("Could not parse existing conversation", error)
+        }
+     }
+     
     const conversation: Conversation = {
         id: id,
-        title: updatedMessages.find(m => m.role === 'user')?.content.substring(0, 40) || 'New Conversation',
+        title: currentTitle || 'New Conversation',
         messages: updatedMessages,
         pledges: updatedPledges,
         timestamp: new Date().toISOString(),
@@ -116,12 +138,12 @@ export function ChatInterface() {
   };
 
 
-  const addMessage = (convoId: string | null, role: 'user' | 'assistant', content: string, pledgeIdeas?: string[], reset = false) => {
+  const addMessage = (role: 'user' | 'assistant', content: string, pledgeIdeas?: string[], reset = false) => {
     setMessages(prev => {
       const newMessage: Message = { id: crypto.randomUUID(), role, content, pledgeIdeas };
       const newMessages = reset ? [newMessage] : [...prev, newMessage];
-      if (convoId) {
-        saveConversation(convoId, newMessages, pledges);
+      if (currentConversationId) {
+        saveConversation(currentConversationId, newMessages, pledges);
       }
       return newMessages;
     });
@@ -146,31 +168,70 @@ export function ChatInterface() {
     });
   };
 
+  const generateTitle = async (convoId: string, convoMessages: Message[]) => {
+    if (isTitleGenerating.current) return;
+    isTitleGenerating.current = true;
+    try {
+        const { title } = await summarizeConversation(convoMessages);
+        saveConversation(convoId, convoMessages, pledges, title);
+    } catch (error) {
+        console.error("Failed to generate conversation title", error);
+        // Save with a default title if summarization fails
+        saveConversation(convoId, convoMessages, pledges, "Chat");
+    } finally {
+        isTitleGenerating.current = false;
+    }
+  }
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading || !currentConversationId) return;
 
     const userInput = input;
-    addMessage(currentConversationId, 'user', userInput);
     setInput("");
     setIsLoading(true);
 
-    const userMessageCount = messages.filter(m => m.role === 'user').length + 1;
+    const tempUserMessage: Message = { id: crypto.randomUUID(), role: 'user', content: userInput };
+    const newMessages = [...messages, tempUserMessage];
+    setMessages(newMessages);
+
+    // Save conversation with user message immediately
+    saveConversation(currentConversationId, newMessages, pledges);
+
+    const userMessageCount = newMessages.filter(m => m.role === 'user').length;
+    
+    // Generate title after the first user message
+    if (userMessageCount === 1) {
+        generateTitle(currentConversationId, newMessages);
+    }
 
     try {
-      const conversationHistory = messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+      const conversationHistory = newMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
       
+      let responseContent = '';
+      let responsePledgeIdeas: string[] | undefined;
+
       if(userMessageCount === 3 && !pledgeOffered) {
         setPledgeOffered(true);
         const pledgeResponse = await encouragePledge({ conversationHistory: JSON.stringify(conversationHistory) });
-        addMessage(currentConversationId, 'assistant', pledgeResponse.encouragement, pledgeResponse.pledgeIdeas);
+        responseContent = pledgeResponse.encouragement;
+        responsePledgeIdeas = pledgeResponse.pledgeIdeas;
       } else {
         const response = await contextualAwareness({ message: userInput, conversationHistory, webSearchEnabled: isWebSearchEnabled });
-        addMessage(currentConversationId, 'assistant', response.response);
+        responseContent = response.response;
       }
+
+      const assistantMessage: Message = { id: crypto.randomUUID(), role: 'assistant', content: responseContent, pledgeIdeas: responsePledgeIdeas };
+      const finalMessages = [...newMessages, assistantMessage];
+      setMessages(finalMessages);
+      saveConversation(currentConversationId, finalMessages, pledges);
+
     } catch (error) {
       console.error("Error with AI flow:", error);
-      addMessage(currentConversationId, 'assistant', "I'm having a little trouble connecting. Please try again in a moment.");
+      const errorMessage: Message = { id: crypto.randomUUID(), role: 'assistant', content: "I'm having a little trouble connecting. Please try again in a moment." };
+      const finalMessages = [...newMessages, errorMessage];
+      setMessages(finalMessages);
+      saveConversation(currentConversationId, finalMessages, pledges);
     } finally {
       setIsLoading(false);
     }

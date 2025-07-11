@@ -6,4 +6,5 @@ import '@/ai/flows/friendly-greeting.ts';
 import '@/ai/flows/pledge-encouragement.ts';
 import '@/ai/flows/contextual-awareness.ts';
 import '@/ai/flows/conversation-guidance.ts';
+import '@/ai/flows/summarize-conversation.ts';
 import '@/ai/tools/web-search.ts';
