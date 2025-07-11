@@ -41,7 +41,7 @@ export default function Home() {
           <ChatInterface />
 
           <footer className="p-4 mt-auto text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} KWS Ai.</p>
+            <p>&copy; {new Date().getFullYear()} KWS Ai. All Rights Reserved.</p>
           </footer>
         </div>
       </SidebarInset>
