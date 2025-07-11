@@ -1,21 +1,50 @@
 import { ChatInterface } from '@/components/chat-interface';
+import { ChatHistory } from '@/components/chat-history';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 import { Globe } from 'lucide-react';
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
-      <header className="sticky top-0 z-10 flex items-center justify-center w-full p-4 border-b shadow-sm bg-background/90 backdrop-blur-sm">
-        <Globe className="w-8 h-8 mr-3 text-primary" />
-        <h1 className="text-3xl font-bold tracking-tight text-center font-headline text-foreground">
-          KWS Ai
-        </h1>
-      </header>
-      
-      <ChatInterface />
-      
-      <footer className="p-4 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} KWS Ai. Your guide to a better world.</p>
-      </footer>
-    </div>
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-2">
+            <Globe className="w-8 h-8 text-primary" />
+            <h1 className="text-xl font-bold tracking-tight font-headline text-foreground">
+              KWS Ai
+            </h1>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <ChatHistory />
+        </SidebarContent>
+      </Sidebar>
+      <SidebarInset>
+        <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
+          <header className="sticky top-0 z-10 flex items-center w-full p-4 border-b shadow-sm bg-background/90 backdrop-blur-sm">
+            <SidebarTrigger className="md:hidden" />
+            <div className="flex-1 text-center md:text-left">
+              <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
+                KWS Ai Chat
+              </h1>
+              <p className="text-sm text-muted-foreground">Your guide to a better world.</p>
+            </div>
+          </header>
+
+          <ChatInterface />
+
+          <footer className="p-4 mt-auto text-center text-sm text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} KWS Ai.</p>
+          </footer>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
