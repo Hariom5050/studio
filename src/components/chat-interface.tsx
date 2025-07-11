@@ -25,7 +25,7 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [pledges, setPledges] = useState<string[]>([]);
   const [pledgeOffered, setPledgeOffered] = useState(false);
-  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(true);
+  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
