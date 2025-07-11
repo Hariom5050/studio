@@ -33,10 +33,9 @@ export function ChatInterface() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const conversationId = searchParams.get('id');
+  const conversationIdFromUrl = searchParams.get('id');
   const isTitleGenerating = useRef(false);
-  const isInitializing = useRef(true);
-
+  
   const saveConversation = useCallback((id: string, updatedMessages: Message[], updatedPledges: string[], title?: string) => {
     if (!id) return;
     let currentTitle = title;
@@ -116,7 +115,7 @@ export function ChatInterface() {
             (error) => {
                 console.warn("Geolocation denied:", error.message);
                 setMessages(prev => {
-                    const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "Since location is not available, here's a general tip: Remember to reduce, reuse, and recycle!" }];
+                    const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "Since location is not available, here's a general one: Remember to reduce, reuse, and recycle!" }];
                     saveConversation(newConvoId, updated, []);
                     return updated;
                 });
@@ -132,30 +131,34 @@ export function ChatInterface() {
 
 
   useEffect(() => {
-    if (isInitializing.current && conversationId) {
-        isInitializing.current = false; // Mark as initialized
+    // This effect now handles both initializing a new chat and loading an existing one.
+    if (conversationIdFromUrl) {
+      if (conversationIdFromUrl !== currentConversationId) {
+        // We've switched to a new or different chat.
         try {
-            const storedConvo = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${conversationId}`);
-            if (storedConvo) {
-                const conversation: Conversation = JSON.parse(storedConvo);
-                setMessages(conversation.messages);
-                setPledges(conversation.pledges || []);
-                setCurrentConversationId(conversationId);
-            } else {
-                startNewChat(conversationId);
-            }
+          const storedConvo = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${conversationIdFromUrl}`);
+          if (storedConvo) {
+            // Existing conversation found, load it.
+            const conversation: Conversation = JSON.parse(storedConvo);
+            setMessages(conversation.messages);
+            setPledges(conversation.pledges || []);
+            setPledgeOffered(conversation.messages.some(m => m.pledgeIdeas));
+            setCurrentConversationId(conversationIdFromUrl);
+          } else {
+            // No stored conversation, so this is a new chat.
+            startNewChat(conversationIdFromUrl);
+          }
         } catch (error) {
-            console.error("Failed to load conversation, starting new one.", error);
-            startNewChat(conversationId);
+          console.error("Failed to load conversation, starting new one.", error);
+          startNewChat(conversationIdFromUrl);
         }
-    } else if (isInitializing.current && !conversationId) {
-        const newConvoId = crypto.randomUUID();
-        // Use replace to avoid polluting browser history and triggering re-renders
-        router.replace(`/?id=${newConvoId}`, { scroll: false });
-        // The effect will re-run with the new conversationId, which will then trigger the initialization logic above.
-        // We don't set isInitializing to false here, to let the next render handle it.
+      }
+    } else {
+      // No ID in the URL, so create a brand new chat.
+      const newConvoId = crypto.randomUUID();
+      router.replace(`/?id=${newConvoId}`, { scroll: false });
     }
-  }, [conversationId, router, startNewChat]);
+  }, [conversationIdFromUrl, currentConversationId, router, startNewChat]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
