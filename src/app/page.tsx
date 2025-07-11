@@ -1,3 +1,6 @@
+
+"use client"
+
 import { ChatInterface } from '@/components/chat-interface';
 import { ChatHistory } from '@/components/chat-history';
 import {
@@ -9,8 +12,13 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Globe } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function Home() {
+function ChatPageContent() {
+  const searchParams = useSearchParams();
+  const conversationId = searchParams.get('id');
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -23,7 +31,7 @@ export default function Home() {
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <ChatHistory />
+          <ChatHistory activeConversationId={conversationId} />
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
@@ -48,4 +56,13 @@ export default function Home() {
       </SidebarInset>
     </SidebarProvider>
   );
+}
+
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ChatPageContent />
+    </Suspense>
+  )
 }

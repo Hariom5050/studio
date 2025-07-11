@@ -1,7 +1,8 @@
+
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import type { Conversation } from '@/lib/types';
@@ -21,13 +22,11 @@ import {
 
 const CONVERSATION_KEY_PREFIX = 'conversation_';
 
-export function ChatHistory() {
+export function ChatHistory({ activeConversationId }: { activeConversationId: string | null }) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const activeConversationId = searchParams.get('id');
 
-  const loadConversations = () => {
+  const loadConversations = useCallback(() => {
     const keys = Object.keys(localStorage).filter(key => key.startsWith(CONVERSATION_KEY_PREFIX));
     const convos = keys.map(key => {
         try {
@@ -39,16 +38,11 @@ export function ChatHistory() {
 
     convos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     setConversations(convos);
-  };
+  }, []);
 
   useEffect(() => {
     loadConversations();
-    // Listen for storage changes to update the history across tabs/components
-    window.addEventListener('storage', loadConversations);
-    return () => {
-      window.removeEventListener('storage', loadConversations);
-    };
-  }, []);
+  }, [activeConversationId, loadConversations]);
 
   const handleNewChat = () => {
     router.push('/');

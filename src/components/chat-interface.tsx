@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect, useRef, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent, useCallback } from "react";
 import type { Message, Conversation } from "@/lib/types";
 import { getLocalizedSustainabilityTip } from "@/ai/flows/localized-sustainability-tip";
 import { contextualAwareness } from "@/ai/flows/contextual-awareness";
@@ -35,7 +36,47 @@ export function ChatInterface() {
   const conversationId = searchParams.get('id');
   const isTitleGenerating = useRef(false);
 
-  const initChat = async (convoId: string | null) => {
+  const saveConversation = useCallback((id: string, updatedMessages: Message[], updatedPledges: string[], title?: string) => {
+    if (!id) return;
+    let currentTitle = title;
+    
+    // Check if conversation already exists to preserve its title
+    const existingConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${id}`);
+    if (existingConvoRaw) {
+       try {
+           const existingConvo = JSON.parse(existingConvoRaw);
+           if (existingConvo.title && existingConvo.title !== 'New Conversation') {
+               currentTitle = existingConvo.title;
+           }
+       } catch (error) {
+           console.error("Could not parse existing conversation", error)
+       }
+    }
+    
+   const conversation: Conversation = {
+       id: id,
+       title: currentTitle || 'New Conversation',
+       messages: updatedMessages,
+       pledges: updatedPledges,
+       timestamp: new Date().toISOString(),
+   };
+   localStorage.setItem(`${CONVERSATION_KEY_PREFIX}${id}`, JSON.stringify(conversation));
+   // Manually trigger a re-render of history if needed via prop changes
+  }, []);
+
+  const addMessage = useCallback((role: 'user' | 'assistant', content: string, pledgeIdeas?: string[], reset = false) => {
+    setMessages(prev => {
+      const newMessage: Message = { id: crypto.randomUUID(), role, content, pledgeIdeas };
+      const newMessages = reset ? [newMessage] : [...prev, newMessage];
+      if (currentConversationId) {
+        saveConversation(currentConversationId, newMessages, pledges);
+      }
+      return newMessages;
+    });
+  }, [currentConversationId, pledges, saveConversation]);
+
+
+  const initChat = useCallback(async (convoId: string | null) => {
     setIsLoading(true);
     setInput("");
     setPledges([]);
@@ -52,19 +93,22 @@ export function ChatInterface() {
           setCurrentConversationId(convoId);
           setIsLoading(false);
           return;
+        } else {
+          // If conversation not found, start a new one with this ID.
+          setCurrentConversationId(convoId);
+          setMessages([]);
         }
       } catch (error) {
         console.error("Failed to load conversation", error);
         // Fallback to new chat if loading fails
       }
+    } else {
+       // Start a new conversation
+      const newConvoId = crypto.randomUUID();
+      router.push(`/?id=${newConvoId}`, { scroll: false });
+      return; // Let the useEffect handle the new ID
     }
 
-    // Start a new conversation
-    const newConvoId = crypto.randomUUID();
-    setCurrentConversationId(newConvoId);
-    setMessages([]);
-    router.push(`/?id=${newConvoId}`, { scroll: false });
-    
     try {
       const greeting = "Hi! I'm KWS AI – your guide to a better world 🌍";
       addMessage('assistant', greeting, undefined, true);
@@ -95,12 +139,11 @@ export function ChatInterface() {
       addMessage('assistant', "I'm having trouble getting started. Please try refreshing the page.", undefined, true);
       setIsLoading(false);
     }
-  };
+  }, [router, addMessage]);
 
   useEffect(() => {
     initChat(conversationId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId]);
+  }, [conversationId, initChat]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -108,45 +151,6 @@ export function ChatInterface() {
     }
   }, [messages]);
 
-  const saveConversation = (id: string, updatedMessages: Message[], updatedPledges: string[], title?: string) => {
-     if (!id) return;
-     let currentTitle = title;
-     
-     // Check if conversation already exists to preserve its title
-     const existingConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${id}`);
-     if (existingConvoRaw) {
-        try {
-            const existingConvo = JSON.parse(existingConvoRaw);
-            if (existingConvo.title) {
-                currentTitle = existingConvo.title;
-            }
-        } catch (error) {
-            console.error("Could not parse existing conversation", error)
-        }
-     }
-     
-    const conversation: Conversation = {
-        id: id,
-        title: currentTitle || 'New Conversation',
-        messages: updatedMessages,
-        pledges: updatedPledges,
-        timestamp: new Date().toISOString(),
-    };
-    localStorage.setItem(`${CONVERSATION_KEY_PREFIX}${id}`, JSON.stringify(conversation));
-    window.dispatchEvent(new Event('storage')); // Notify other components of the change
-  };
-
-
-  const addMessage = (role: 'user' | 'assistant', content: string, pledgeIdeas?: string[], reset = false) => {
-    setMessages(prev => {
-      const newMessage: Message = { id: crypto.randomUUID(), role, content, pledgeIdeas };
-      const newMessages = reset ? [newMessage] : [...prev, newMessage];
-      if (currentConversationId) {
-        saveConversation(currentConversationId, newMessages, pledges);
-      }
-      return newMessages;
-    });
-  };
 
   const handlePledgeSelect = (pledge: string) => {
     const updatedPledges = [...pledges, pledge];
@@ -173,6 +177,8 @@ export function ChatInterface() {
     try {
         const { title } = await summarizeConversation(convoMessages);
         saveConversation(convoId, convoMessages, pledges, title);
+        // Force a history refresh by navigating to the same URL
+        router.push(`/?id=${convoId}`, { scroll: false });
     } catch (error) {
         console.error("Failed to generate conversation title", error);
         // Save with a default title if summarization fails
