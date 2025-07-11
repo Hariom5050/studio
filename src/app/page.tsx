@@ -42,6 +42,7 @@ export default function Home() {
 
           <footer className="p-4 mt-auto text-center text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} KWS Ai. All Rights Reserved.</p>
+            <p>KWS Ai can make mistakes, so double-check it.</p>
           </footer>
         </div>
       </SidebarInset>
