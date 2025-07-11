@@ -27,30 +27,32 @@ export function ChatHistory({ activeConversationId }: { activeConversationId: st
   const router = useRouter();
 
   const loadConversations = useCallback(() => {
-    const keys = Object.keys(localStorage).filter(key => key.startsWith(CONVERSATION_KEY_PREFIX));
-    const convos = keys.map(key => {
-        try {
-            return JSON.parse(localStorage.getItem(key) as string) as Conversation;
-        } catch {
-            return null;
-        }
-    }).filter((c): c is Conversation => c !== null);
+    if (typeof window === 'undefined') return;
+    try {
+      const keys = Object.keys(localStorage).filter(key => key.startsWith(CONVERSATION_KEY_PREFIX));
+      const convos = keys.map(key => {
+          try {
+              return JSON.parse(localStorage.getItem(key) as string) as Conversation;
+          } catch {
+              return null;
+          }
+      }).filter((c): c is Conversation => c !== null);
 
-    convos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    setConversations(convos);
+      convos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setConversations(convos);
+    } catch (error) {
+        console.error("Failed to load conversations from local storage", error);
+        setConversations([]);
+    }
   }, []);
 
   useEffect(() => {
     loadConversations();
-    // Add a storage event listener to update history across tabs/windows
-    window.addEventListener('storage', loadConversations);
-    return () => {
-      window.removeEventListener('storage', loadConversations);
-    };
-  }, [loadConversations]);
+  }, [activeConversationId, loadConversations]);
 
   const handleNewChat = () => {
-    router.push('/');
+    const newId = crypto.randomUUID();
+    router.push(`/?id=${newId}`);
   };
   
   const handleSelectChat = (id: string) => {
@@ -62,12 +64,10 @@ export function ChatHistory({ activeConversationId }: { activeConversationId: st
     localStorage.removeItem(`${CONVERSATION_KEY_PREFIX}${id}`);
     
     if (activeConversationId === id) {
-      router.push('/');
-      // A hard reload might be necessary if state isn't resetting properly across components.
-      // window.location.href = '/'; 
+      handleNewChat();
+    } else {
+        loadConversations();
     }
-    // Manually trigger a re-load of conversations after deletion
-    loadConversations();
   }
 
   return (

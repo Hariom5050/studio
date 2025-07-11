@@ -35,6 +35,38 @@ export function ChatInterface() {
   const router = useRouter();
   const isTitleGenerating = useRef(false);
 
+  // Load conversation from URL or start a new one
+  useEffect(() => {
+    const conversationIdFromUrl = searchParams.get('id');
+    
+    // If URL has ID and it's different from current, load it
+    if (conversationIdFromUrl && conversationIdFromUrl !== currentConversationId) {
+      const storedConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${conversationIdFromUrl}`);
+      if (storedConvoRaw) {
+        try {
+          const storedConvo: Conversation = JSON.parse(storedConvoRaw);
+          setCurrentConversationId(storedConvo.id);
+          setMessages(storedConvo.messages);
+          setPledges(storedConvo.pledges || []);
+          setPledgeOffered(storedConvo.messages.some(m => m.pledgeIdeas));
+          setIsLoading(false);
+        } catch (error) {
+          console.error("Failed to parse conversation, starting new chat.", error);
+          const newId = crypto.randomUUID();
+          router.replace(`/?id=${newId}`);
+        }
+      } else {
+        // If no stored convo, this is a new chat, initialize it
+        startNewChat(conversationIdFromUrl);
+      }
+    } else if (!conversationIdFromUrl) {
+      // If no ID in URL, create one and redirect.
+      const newId = crypto.randomUUID();
+      router.replace(`/?id=${newId}`);
+    }
+  }, [searchParams]);
+  
+
   const saveConversation = useCallback((id: string, updatedMessages: Message[], updatedPledges: string[], title?: string) => {
     if (!id) return;
     let currentTitle = title;
@@ -59,94 +91,55 @@ export function ChatInterface() {
        timestamp: new Date().toISOString(),
    };
    localStorage.setItem(`${CONVERSATION_KEY_PREFIX}${id}`, JSON.stringify(conversation));
-   window.dispatchEvent(new Event('storage')); // Notify history component of changes
   }, []);
 
-  const startNewChat = useCallback(async (newConvoId: string) => {
-      setIsLoading(true);
-      setCurrentConversationId(newConvoId);
-      
-      try {
-        const greeting = "Hi! I'm KWS AI – your guide to a better world 🌍";
-        const newMessages: Message[] = [
-            { id: crypto.randomUUID(), role: 'assistant', content: greeting },
-            { id: crypto.randomUUID(), role: 'assistant', content: 'For a better experience, please allow location permissions when prompted.'}
-        ];
-        setMessages(newMessages);
-        setPledges([]);
-        setPledgeOffered(false);
-        saveConversation(newConvoId, newMessages, []);
+  const startNewChat = useCallback((newConvoId: string) => {
+    setIsLoading(true);
+    setCurrentConversationId(newConvoId);
+    
+    const greeting = "Hi! I'm KWS AI – your guide to a better world 🌍";
+    const initialMessages: Message[] = [
+        { id: crypto.randomUUID(), role: 'assistant', content: greeting },
+        { id: crypto.randomUUID(), role: 'assistant', content: 'For a better experience, please allow location permissions when prompted.'}
+    ];
+    setMessages(initialMessages);
+    setPledges([]);
+    setPledgeOffered(false);
+    saveConversation(newConvoId, initialMessages, []);
 
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const { latitude, longitude } = position.coords;
-                const location = `lat: ${latitude}, lon: ${longitude}`;
-                try {
-                    const tip = await getLocalizedSustainabilityTip({ location });
-                    setMessages(prev => {
-                        const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: tip.tip }];
-                        saveConversation(newConvoId, updated, []);
-                        return updated;
-                    });
-                } catch (error) {
-                    console.error("Error getting sustainability tip:", error);
-                    setMessages(prev => {
-                        const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "I couldn't fetch a local tip, but here's a general one: Remember to reduce, reuse, and recycle!" }];
-                        saveConversation(newConvoId, updated, []);
-                        return updated;
-                    });
-                } finally {
-                    setIsLoading(false);
-                }
-            },
-            (error) => {
-                console.warn("Geolocation denied:", error.message);
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const { latitude, longitude } = position.coords;
+            const location = `lat: ${latitude}, lon: ${longitude}`;
+            try {
+                const tip = await getLocalizedSustainabilityTip({ location });
                 setMessages(prev => {
-                    const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "Since location is not available, here's a general one: Remember to reduce, reuse, and recycle!" }];
+                    const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: tip.tip }];
                     saveConversation(newConvoId, updated, []);
                     return updated;
                 });
+            } catch (error) {
+                console.error("Error getting sustainability tip:", error);
+                setMessages(prev => {
+                    const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "I couldn't fetch a local tip, but here's a general one: Remember to reduce, reuse, and recycle!" }];
+                    saveConversation(newConvoId, updated, []);
+                    return updated;
+                });
+            } finally {
                 setIsLoading(false);
             }
-        );
-    } catch (error) {
-        console.error("Error initializing chat:", error);
-        setMessages(prev => {
-            const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "I'm having trouble getting started. Please try refreshing the page." }];
-            saveConversation(newConvoId, updated, []);
-            return updated;
-        });
-        setIsLoading(false);
-    }
-  }, [saveConversation]);
-
-  useEffect(() => {
-    const conversationIdFromUrl = searchParams.get('id');
-
-    if (conversationIdFromUrl) {
-      if (conversationIdFromUrl !== currentConversationId) {
-        const storedConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${conversationIdFromUrl}`);
-        if (storedConvoRaw) {
-          try {
-            const storedConvo: Conversation = JSON.parse(storedConvoRaw);
-            setCurrentConversationId(storedConvo.id);
-            setMessages(storedConvo.messages);
-            setPledges(storedConvo.pledges || []);
-            setPledgeOffered(storedConvo.messages.some(m => m.pledgeIdeas));
-          } catch (error) {
-            console.error("Failed to parse conversation, starting new chat.", error);
-            const newId = crypto.randomUUID();
-            router.replace(`/?id=${newId}`, { scroll: false });
-          }
-        } else {
-          startNewChat(conversationIdFromUrl);
+        },
+        (error) => {
+            console.warn("Geolocation denied:", error.message);
+            setMessages(prev => {
+                const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "Since location is not available, here's a general one: Remember to reduce, reuse, and recycle!" }];
+                saveConversation(newConvoId, updated, []);
+                return updated;
+            });
+            setIsLoading(false);
         }
-      }
-    } else {
-      const newId = crypto.randomUUID();
-      router.replace(`/?id=${newId}`, { scroll: false });
-    }
-  }, [searchParams, currentConversationId, router, startNewChat]);
+    );
+  }, [saveConversation]);
 
 
   useEffect(() => {
