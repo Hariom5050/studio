@@ -74,11 +74,7 @@ export function ChatInterface() {
 
 
   const startNewChat = useCallback(async (newConvoId: string) => {
-      setMessages([]);
-      setPledges([]);
-      setPledgeOffered(false);
       setIsLoading(true);
-      setCurrentConversationId(newConvoId);
       
       try {
         const greeting = "Hi! I'm KWS AI – your guide to a better world 🌍";
@@ -87,6 +83,8 @@ export function ChatInterface() {
             { id: crypto.randomUUID(), role: 'assistant', content: 'For a better experience, please allow location permissions when prompted.'}
         ];
         setMessages(newMessages);
+        setPledges([]);
+        setPledgeOffered(false);
         saveConversation(newConvoId, newMessages, []);
 
         navigator.geolocation.getCurrentPosition(
@@ -132,27 +130,31 @@ export function ChatInterface() {
   useEffect(() => {
     const conversationIdFromUrl = searchParams.get('id');
 
-    if (conversationIdFromUrl) {
-      if (conversationIdFromUrl !== currentConversationId) {
-        const storedConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${conversationIdFromUrl}`);
-        if (storedConvoRaw) {
-          try {
-            const storedConvo: Conversation = JSON.parse(storedConvoRaw);
-            setMessages(storedConvo.messages);
-            setPledges(storedConvo.pledges || []);
-            setPledgeOffered(storedConvo.messages.some(m => m.pledgeIdeas));
-            setCurrentConversationId(storedConvo.id);
-            setIsLoading(false);
-          } catch (error) {
-            console.error("Failed to parse conversation, starting new chat.", error);
-            router.replace(`/?id=${crypto.randomUUID()}`, { scroll: false });
-          }
-        } else {
-          startNewChat(conversationIdFromUrl);
-        }
-      }
-    } else {
+    if (!conversationIdFromUrl) {
+      // If no ID in URL, create one and redirect. This should only happen once on first load.
       router.replace(`/?id=${crypto.randomUUID()}`, { scroll: false });
+      return;
+    }
+
+    if (conversationIdFromUrl !== currentConversationId) {
+        setCurrentConversationId(conversationIdFromUrl);
+        const storedConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${conversationIdFromUrl}`);
+
+        if (storedConvoRaw) {
+            try {
+                const storedConvo: Conversation = JSON.parse(storedConvoRaw);
+                setMessages(storedConvo.messages);
+                setPledges(storedConvo.pledges || []);
+                setPledgeOffered(storedConvo.messages.some(m => m.pledgeIdeas));
+                setIsLoading(false);
+            } catch (error) {
+                console.error("Failed to parse conversation, starting new chat.", error);
+                startNewChat(conversationIdFromUrl);
+            }
+        } else {
+            // No stored conversation, so it's a new chat.
+            startNewChat(conversationIdFromUrl);
+        }
     }
   }, [searchParams, currentConversationId, router, startNewChat]);
 
@@ -188,6 +190,7 @@ export function ChatInterface() {
     try {
         const { title } = await summarizeConversation(convoMessages);
         saveConversation(convoId, convoMessages, pledges, title);
+        // We trigger a re-render of the history by navigating, which ensures the title updates
         router.replace(`/?id=${convoId}`, { scroll: false });
     } catch (error) {
         console.error("Failed to generate conversation title", error);
