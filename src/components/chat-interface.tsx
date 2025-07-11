@@ -35,12 +35,12 @@ export function ChatInterface() {
   const router = useRouter();
   const conversationId = searchParams.get('id');
   const isTitleGenerating = useRef(false);
+  const isInitializing = useRef(true);
 
   const saveConversation = useCallback((id: string, updatedMessages: Message[], updatedPledges: string[], title?: string) => {
     if (!id) return;
     let currentTitle = title;
     
-    // Check if conversation already exists to preserve its title
     const existingConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${id}`);
     if (existingConvoRaw) {
        try {
@@ -61,7 +61,6 @@ export function ChatInterface() {
        timestamp: new Date().toISOString(),
    };
    localStorage.setItem(`${CONVERSATION_KEY_PREFIX}${id}`, JSON.stringify(conversation));
-   // Manually trigger a re-render of history if needed via prop changes
   }, []);
 
   const addMessage = useCallback((role: 'user' | 'assistant', content: string, pledgeIdeas?: string[], reset = false) => {
@@ -76,74 +75,87 @@ export function ChatInterface() {
   }, [currentConversationId, pledges, saveConversation]);
 
 
-  const initChat = useCallback(async (convoId: string | null) => {
-    setIsLoading(true);
-    setInput("");
-    setPledges([]);
-    setPledgeOffered(false);
-    
-    if (convoId) {
-      // Load existing conversation
+  const startNewChat = useCallback(async (newConvoId: string) => {
+      setMessages([]);
+      setPledges([]);
+      setPledgeOffered(false);
+      setIsLoading(true);
+      setCurrentConversationId(newConvoId);
+      
       try {
-        const storedConvo = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${convoId}`);
-        if (storedConvo) {
-          const conversation: Conversation = JSON.parse(storedConvo);
-          setMessages(conversation.messages);
-          setPledges(conversation.pledges || []);
-          setCurrentConversationId(convoId);
-          setIsLoading(false);
-          return;
-        } else {
-          // If conversation not found, start a new one with this ID.
-          setCurrentConversationId(convoId);
-          setMessages([]);
-        }
-      } catch (error) {
-        console.error("Failed to load conversation", error);
-        // Fallback to new chat if loading fails
-      }
-    } else {
-       // Start a new conversation
-      const newConvoId = crypto.randomUUID();
-      router.push(`/?id=${newConvoId}`, { scroll: false });
-      return; // Let the useEffect handle the new ID
-    }
+        const greeting = "Hi! I'm KWS AI – your guide to a better world 🌍";
+        const newMessages: Message[] = [
+            { id: crypto.randomUUID(), role: 'assistant', content: greeting },
+            { id: crypto.randomUUID(), role: 'assistant', content: 'For a better experience, please allow location permissions when prompted.'}
+        ];
+        setMessages(newMessages);
+        saveConversation(newConvoId, newMessages, []);
 
-    try {
-      const greeting = "Hi! I'm KWS AI – your guide to a better world 🌍";
-      addMessage('assistant', greeting, undefined, true);
-      addMessage('assistant', 'For a better experience, please allow location permissions when prompted.');
-
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          const location = `lat: ${latitude}, lon: ${longitude}`;
-          try {
-            const tip = await getLocalizedSustainabilityTip({ location });
-            addMessage('assistant', tip.tip);
-          } catch (error) {
-            console.error("Error getting sustainability tip:", error);
-            addMessage('assistant', "I couldn't fetch a local tip, but here's a general one: Remember to reduce, reuse, and recycle!");
-          } finally {
-            setIsLoading(false);
-          }
-        },
-        (error) => {
-          console.warn("Geolocation denied:", error.message);
-          addMessage('assistant', "Since location is not available, here's a general tip: Remember to reduce, reuse, and recycle!");
-          setIsLoading(false);
-        }
-      );
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                const location = `lat: ${latitude}, lon: ${longitude}`;
+                try {
+                    const tip = await getLocalizedSustainabilityTip({ location });
+                    setMessages(prev => {
+                        const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: tip.tip }];
+                        saveConversation(newConvoId, updated, []);
+                        return updated;
+                    });
+                } catch (error) {
+                    console.error("Error getting sustainability tip:", error);
+                    setMessages(prev => {
+                        const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "I couldn't fetch a local tip, but here's a general one: Remember to reduce, reuse, and recycle!" }];
+                        saveConversation(newConvoId, updated, []);
+                        return updated;
+                    });
+                } finally {
+                    setIsLoading(false);
+                }
+            },
+            (error) => {
+                console.warn("Geolocation denied:", error.message);
+                setMessages(prev => {
+                    const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "Since location is not available, here's a general tip: Remember to reduce, reuse, and recycle!" }];
+                    saveConversation(newConvoId, updated, []);
+                    return updated;
+                });
+                setIsLoading(false);
+            }
+        );
     } catch (error) {
-      console.error("Error initializing chat:", error);
-      addMessage('assistant', "I'm having trouble getting started. Please try refreshing the page.", undefined, true);
-      setIsLoading(false);
+        console.error("Error initializing chat:", error);
+        addMessage('assistant', "I'm having trouble getting started. Please try refreshing the page.", undefined, true);
+        setIsLoading(false);
     }
-  }, [router, addMessage]);
+  }, [addMessage, saveConversation]);
+
 
   useEffect(() => {
-    initChat(conversationId);
-  }, [conversationId, initChat]);
+    if (isInitializing.current && conversationId) {
+        isInitializing.current = false; // Mark as initialized
+        try {
+            const storedConvo = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${conversationId}`);
+            if (storedConvo) {
+                const conversation: Conversation = JSON.parse(storedConvo);
+                setMessages(conversation.messages);
+                setPledges(conversation.pledges || []);
+                setCurrentConversationId(conversationId);
+            } else {
+                startNewChat(conversationId);
+            }
+        } catch (error) {
+            console.error("Failed to load conversation, starting new one.", error);
+            startNewChat(conversationId);
+        }
+    } else if (isInitializing.current && !conversationId) {
+        const newConvoId = crypto.randomUUID();
+        // Use replace to avoid polluting browser history and triggering re-renders
+        router.replace(`/?id=${newConvoId}`, { scroll: false });
+        // The effect will re-run with the new conversationId, which will then trigger the initialization logic above.
+        // We don't set isInitializing to false here, to let the next render handle it.
+    }
+  }, [conversationId, router, startNewChat]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -177,11 +189,9 @@ export function ChatInterface() {
     try {
         const { title } = await summarizeConversation(convoMessages);
         saveConversation(convoId, convoMessages, pledges, title);
-        // Force a history refresh by navigating to the same URL
-        router.push(`/?id=${convoId}`, { scroll: false });
+        router.replace(`/?id=${convoId}`, { scroll: false });
     } catch (error) {
         console.error("Failed to generate conversation title", error);
-        // Save with a default title if summarization fails
         saveConversation(convoId, convoMessages, pledges, "Chat");
     } finally {
         isTitleGenerating.current = false;
@@ -200,12 +210,10 @@ export function ChatInterface() {
     const newMessages = [...messages, tempUserMessage];
     setMessages(newMessages);
 
-    // Save conversation with user message immediately
     saveConversation(currentConversationId, newMessages, pledges);
 
     const userMessageCount = newMessages.filter(m => m.role === 'user').length;
     
-    // Generate title after the first user message
     if (userMessageCount === 1) {
         generateTitle(currentConversationId, newMessages);
     }
