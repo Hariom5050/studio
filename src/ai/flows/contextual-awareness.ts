@@ -84,7 +84,7 @@ const contextualAwarenessFlow = ai.defineFlow(
       return output!;
     } catch (error) {
       console.error("Error in contextualAwarenessFlow:", error);
-      return { response: "I'm having a little trouble connecting right now. Please try again in a moment." };
+      return { response: "Wow, so many people are chatting with me right now! I'm feeling the love, but my circuits are a bit warm. Could you please try sending that again in a moment?" };
     }
   }
 );

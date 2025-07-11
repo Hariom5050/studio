@@ -58,7 +58,7 @@ const encouragePledgeFlow = ai.defineFlow(
     } catch (error) {
       console.error("Error in encouragePledgeFlow:", error);
       return {
-        encouragement: "It's great that you're thinking about making a positive impact! What's one small thing you could do today?",
+        encouragement: "It's wonderful you're thinking about making the world better! My brain is a little fuzzy from all the amazing conversations today, but here are a few simple ideas.",
         pledgeIdeas: [
           "Use a reusable water bottle.",
           "Share a kind word with someone.",

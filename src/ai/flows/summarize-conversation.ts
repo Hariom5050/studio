@@ -64,7 +64,7 @@ const summarizeConversationFlow = ai.defineFlow(
       return output!;
     } catch (error) {
       console.error("Error in summarizeConversationFlow:", error);
-      return { title: "Chat" };
+      return { title: "New Chat" };
     }
   }
 );

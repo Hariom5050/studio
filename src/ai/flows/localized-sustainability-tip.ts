@@ -60,7 +60,7 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
       return output!;
     } catch (error) {
       console.error("Error in localizedSustainabilityTipFlow:", error);
-      return { tip: "I couldn't fetch a local tip, but here's a general one: Remember to reduce, reuse, and recycle!" };
+      return { tip: "I'm feeling so much love from everyone today that my special location services are taking a little nap! So here's a tip that's great for anywhere: Remember to reduce, reuse, and recycle!" };
     }
   }
 );
