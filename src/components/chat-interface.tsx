@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import type { Message, Conversation } from "@/lib/types";
-import { friendlyGreeting } from "@/ai/flows/friendly-greeting";
 import { getLocalizedSustainabilityTip } from "@/ai/flows/localized-sustainability-tip";
 import { contextualAwareness } from "@/ai/flows/contextual-awareness";
 import { encouragePledge } from "@/ai/flows/pledge-encouragement";
@@ -67,8 +66,8 @@ export function ChatInterface() {
     router.push(`/?id=${newConvoId}`, { scroll: false });
     
     try {
-      const greeting = await friendlyGreeting();
-      addMessage('assistant', greeting.greeting, undefined, true);
+      const greeting = "Hi! I'm KWS AI – your guide to a better world 🌍";
+      addMessage('assistant', greeting, undefined, true);
       addMessage('assistant', 'For a better experience, please allow location permissions when prompted.');
 
       navigator.geolocation.getCurrentPosition(
