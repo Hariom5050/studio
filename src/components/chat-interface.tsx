@@ -33,7 +33,6 @@ export function ChatInterface() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const conversationIdFromUrl = searchParams.get('id');
   const isTitleGenerating = useRef(false);
   
   const saveConversation = useCallback((id: string, updatedMessages: Message[], updatedPledges: string[], title?: string) => {
@@ -62,10 +61,10 @@ export function ChatInterface() {
    localStorage.setItem(`${CONVERSATION_KEY_PREFIX}${id}`, JSON.stringify(conversation));
   }, []);
 
-  const addMessage = useCallback((role: 'user' | 'assistant', content: string, pledgeIdeas?: string[], reset = false) => {
+  const addMessage = useCallback((role: 'user' | 'assistant', content: string, pledgeIdeas?: string[]) => {
     setMessages(prev => {
       const newMessage: Message = { id: crypto.randomUUID(), role, content, pledgeIdeas };
-      const newMessages = reset ? [newMessage] : [...prev, newMessage];
+      const newMessages = [...prev, newMessage];
       if (currentConversationId) {
         saveConversation(currentConversationId, newMessages, pledges);
       }
@@ -124,41 +123,38 @@ export function ChatInterface() {
         );
     } catch (error) {
         console.error("Error initializing chat:", error);
-        addMessage('assistant', "I'm having trouble getting started. Please try refreshing the page.", undefined, true);
+        addMessage('assistant', "I'm having trouble getting started. Please try refreshing the page.");
         setIsLoading(false);
     }
   }, [addMessage, saveConversation]);
 
 
   useEffect(() => {
-    // This effect now handles both initializing a new chat and loading an existing one.
+    const conversationIdFromUrl = searchParams.get('id');
+
     if (conversationIdFromUrl) {
       if (conversationIdFromUrl !== currentConversationId) {
-        // We've switched to a new or different chat.
-        try {
-          const storedConvo = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${conversationIdFromUrl}`);
-          if (storedConvo) {
-            // Existing conversation found, load it.
-            const conversation: Conversation = JSON.parse(storedConvo);
-            setMessages(conversation.messages);
-            setPledges(conversation.pledges || []);
-            setPledgeOffered(conversation.messages.some(m => m.pledgeIdeas));
-            setCurrentConversationId(conversationIdFromUrl);
-          } else {
-            // No stored conversation, so this is a new chat.
-            startNewChat(conversationIdFromUrl);
+        const storedConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${conversationIdFromUrl}`);
+        if (storedConvoRaw) {
+          try {
+            const storedConvo: Conversation = JSON.parse(storedConvoRaw);
+            setMessages(storedConvo.messages);
+            setPledges(storedConvo.pledges || []);
+            setPledgeOffered(storedConvo.messages.some(m => m.pledgeIdeas));
+            setCurrentConversationId(storedConvo.id);
+            setIsLoading(false);
+          } catch (error) {
+            console.error("Failed to parse conversation, starting new chat.", error);
+            router.replace(`/?id=${crypto.randomUUID()}`, { scroll: false });
           }
-        } catch (error) {
-          console.error("Failed to load conversation, starting new one.", error);
+        } else {
           startNewChat(conversationIdFromUrl);
         }
       }
     } else {
-      // No ID in the URL, so create a brand new chat.
-      const newConvoId = crypto.randomUUID();
-      router.replace(`/?id=${newConvoId}`, { scroll: false });
+      router.replace(`/?id=${crypto.randomUUID()}`, { scroll: false });
     }
-  }, [conversationIdFromUrl, currentConversationId, router, startNewChat]);
+  }, [searchParams, currentConversationId, router, startNewChat]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
