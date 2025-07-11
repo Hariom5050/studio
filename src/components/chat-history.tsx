@@ -55,12 +55,22 @@ export function ChatHistory() {
 
   useEffect(() => {
     loadConversations();
+    const handleStorageChange = (e: StorageEvent) => {
+        if (e.key && e.key.startsWith(CONVERSATION_KEY_PREFIX)) {
+            loadConversations();
+        }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+    };
   }, [loadConversations, activeConversationId]);
 
   const handleNewChat = () => {
     setIsEditMode(false);
     setSelectedConversations(new Set());
-    router.push('/');
+    const newId = crypto.randomUUID();
+    router.push(`/?id=${newId}`);
   };
   
   const handleSelectChat = (id: string) => {
@@ -97,7 +107,8 @@ export function ChatHistory() {
     });
 
     if (activeConversationId && selectedConversations.has(activeConversationId)) {
-        router.push('/');
+        const newId = crypto.randomUUID();
+        router.push(`/?id=${newId}`);
     }
     
     loadConversations();
