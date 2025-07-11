@@ -92,7 +92,7 @@ export const webSearch = ai.defineTool(
             title: 'Search Failed',
             link: '#',
             snippet:
-              'An error occurred while trying to perform the web search.',
+              'An error occurred while trying to perform the web search. Please check the server logs for more details.',
           },
         ],
       };
