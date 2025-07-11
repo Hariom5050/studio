@@ -58,12 +58,8 @@ const encouragePledgeFlow = ai.defineFlow(
     } catch (error) {
       console.error("Error in encouragePledgeFlow:", error);
       return {
-        encouragement: "It's wonderful you're thinking about making the world better! My brain is a little fuzzy from all the amazing conversations today, but here are a few simple ideas.",
-        pledgeIdeas: [
-          "Use a reusable water bottle.",
-          "Share a kind word with someone.",
-          "Spend 5 minutes learning about a different culture."
-        ]
+        encouragement: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!",
+        pledgeIdeas: []
       };
     }
   }

@@ -60,7 +60,7 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
       return output!;
     } catch (error) {
       console.error("Error in localizedSustainabilityTipFlow:", error);
-      return { tip: "I'm feeling so much love from everyone today that my special location services are taking a little nap! So here's a tip that's great for anywhere: Remember to reduce, reuse, and recycle!" };
+      return { tip: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
     }
   }
 );
