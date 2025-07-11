@@ -41,8 +41,8 @@ export default function Home() {
           <ChatInterface />
 
           <footer className="p-4 mt-auto text-center text-sm text-muted-foreground">
-            <p>KWS Ai can make mistakes, so double-check it.</p>
-            <p>&copy; {new Date().getFullYear()} KWS Ai All Rights Reserved.</p>
+            <p>KWS Ai may display inaccurate information. Please verify important details.</p>
+            <p>&copy; {new Date().getFullYear()} KWS Ai. All Rights Reserved.</p>
           </footer>
         </div>
       </SidebarInset>
