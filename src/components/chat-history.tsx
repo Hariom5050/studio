@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import type { Conversation } from '@/lib/types';
@@ -16,15 +16,20 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const CONVERSATION_KEY_PREFIX = 'conversation_';
 
-export function ChatHistory({ activeConversationId }: { activeConversationId: string | null }) {
+export function ChatHistory() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
+  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeConversationId = searchParams.get('id');
 
   const loadConversations = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -48,9 +53,19 @@ export function ChatHistory({ activeConversationId }: { activeConversationId: st
 
   useEffect(() => {
     loadConversations();
-  }, [activeConversationId, loadConversations]);
+    const handleStorageChange = (e: StorageEvent) => {
+        if (e.key && e.key.startsWith(CONVERSATION_KEY_PREFIX)) {
+            loadConversations();
+        }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [loadConversations]);
 
   const handleNewChat = () => {
+    setSelectedConversations(new Set());
     const newId = crypto.randomUUID();
     router.push(`/?id=${newId}`);
   };
@@ -59,56 +74,124 @@ export function ChatHistory({ activeConversationId }: { activeConversationId: st
     router.push(`/?id=${id}`);
   };
 
-  const handleDeleteChat = (id: string, e: React.MouseEvent) => {
+  const handleToggleSelection = (id: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    localStorage.removeItem(`${CONVERSATION_KEY_PREFIX}${id}`);
-    
-    if (activeConversationId === id) {
-      handleNewChat();
+    const newSelection = new Set(selectedConversations);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
     } else {
-        loadConversations();
+      newSelection.add(id);
     }
+    setSelectedConversations(newSelection);
+  }
+
+  const handleSelectAll = () => {
+    if (selectedConversations.size === conversations.length) {
+      setSelectedConversations(new Set());
+    } else {
+      const allIds = new Set(conversations.map(c => c.id));
+      setSelectedConversations(allIds);
+    }
+  }
+
+  const handleDeleteSelected = () => {
+    const idsToDelete = Array.from(selectedConversations);
+    idsToDelete.forEach(id => {
+      localStorage.removeItem(`${CONVERSATION_KEY_PREFIX}${id}`);
+    });
+
+    if (activeConversationId && selectedConversations.has(activeConversationId)) {
+      router.push('/');
+    }
+    
+    loadConversations();
+    setSelectedConversations(new Set());
+    setDeleteDialogOpen(false);
+    
+    // This forces a refresh of the chat list for other components listening to storage events
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: `${CONVERSATION_KEY_PREFIX}batch_delete`,
+      oldValue: null,
+      newValue: null,
+      url: window.location.href,
+      storageArea: localStorage,
+    }));
   }
 
   return (
     <div className="flex flex-col h-full p-2">
-      <Button variant="outline" className="mb-4" onClick={handleNewChat}>
-        <PlusCircle className="w-4 h-4 mr-2" />
-        New Chat
-      </Button>
+      <div className="flex items-center gap-2 mb-4">
+        <Button variant="outline" className="flex-1" onClick={handleNewChat}>
+          <PlusCircle className="w-4 h-4 mr-2" />
+          New Chat
+        </Button>
+        {selectedConversations.size > 0 && (
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="icon">
+                        <Trash2 className="w-4 h-4" />
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete {selectedConversations.size} conversation(s).
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteSelected}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        )}
+      </div>
+
+       {conversations.length > 0 && (
+        <div className="flex items-center px-2 py-2 mb-2 space-x-2 border rounded-md">
+            <Checkbox
+              id="select-all"
+              checked={selectedConversations.size > 0 && selectedConversations.size === conversations.length}
+              onCheckedChange={handleSelectAll}
+            />
+            <Label htmlFor="select-all" className="flex-1 text-sm font-medium">
+              {selectedConversations.size > 0 ? `${selectedConversations.size} selected` : 'Select All'}
+            </Label>
+        </div>
+       )}
+
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-2 pr-2">
           {conversations.map(convo => (
-            <div key={convo.id} className="relative group">
+            <div
+              key={convo.id}
+              className={cn(
+                "w-full flex items-center gap-2 pr-2 rounded-md transition-colors cursor-pointer group",
+                convo.id === activeConversationId ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+              )}
+              onClick={() => handleSelectChat(convo.id)}
+            >
+              <Checkbox
+                className={cn(
+                    "ml-2 my-2 transition-opacity",
+                    convo.id === activeConversationId ? "border-accent-foreground" : "",
+                    selectedConversations.has(convo.id) ? "opacity-100" : "opacity-40 group-hover:opacity-100"
+                )}
+                checked={selectedConversations.has(convo.id)}
+                onClick={(e) => handleToggleSelection(convo.id, e)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        handleToggleSelection(convo.id, e)
+                    }
+                }}
+              />
               <Button
                 variant="ghost"
-                className={cn(
-                    "w-full justify-start text-left h-auto whitespace-normal pr-8",
-                    convo.id === activeConversationId && "bg-accent text-accent-foreground"
-                )}
-                onClick={() => handleSelectChat(convo.id)}
+                className="flex-1 w-full h-auto px-2 py-2 text-left justify-start whitespace-normal bg-transparent hover:bg-transparent"
               >
                 {convo.title}
               </Button>
-               <AlertDialog>
-                <AlertDialogTrigger asChild>
-                   <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100">
-                      <Trash2 className="w-4 h-4 text-muted-foreground" />
-                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete this conversation.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={(e) => handleDeleteChat(convo.id, e)}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             </div>
           ))}
         </div>

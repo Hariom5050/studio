@@ -12,13 +12,9 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Globe } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 
 function ChatPageContent() {
-  const searchParams = useSearchParams();
-  const conversationId = searchParams.get('id');
-
   return (
     <SidebarProvider>
       <Sidebar>
@@ -31,7 +27,7 @@ function ChatPageContent() {
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <ChatHistory activeConversationId={conversationId} />
+          <ChatHistory />
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
