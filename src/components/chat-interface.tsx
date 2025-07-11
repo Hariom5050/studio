@@ -35,6 +35,33 @@ export function ChatInterface() {
   const router = useRouter();
   const isTitleGenerating = useRef(false);
 
+  const saveConversation = useCallback((id: string, updatedMessages: Message[], updatedPledges?: string[], title?: string) => {
+    if (!id || typeof window === 'undefined') return;
+    let currentTitle = title;
+    
+    const existingConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${id}`);
+    if (existingConvoRaw) {
+       try {
+           const existingConvo = JSON.parse(existingConvoRaw);
+           if (existingConvo.title && !title) {
+               currentTitle = existingConvo.title;
+           }
+       } catch (error) {
+           console.error("Could not parse existing conversation", error)
+       }
+    }
+    
+   const conversation: Conversation = {
+       id: id,
+       title: currentTitle || 'New Conversation',
+       messages: updatedMessages,
+       pledges: updatedPledges || pledges,
+       timestamp: new Date().toISOString(),
+   };
+   localStorage.setItem(`${CONVERSATION_KEY_PREFIX}${id}`, JSON.stringify(conversation));
+   window.dispatchEvent(new StorageEvent('storage', { key: `${CONVERSATION_KEY_PREFIX}${id}`, storageArea: localStorage }));
+  }, [pledges]);
+
   const startNewChat = useCallback((newConvoId: string) => {
     setIsLoading(true);
     setCurrentConversationId(newConvoId);
@@ -111,34 +138,6 @@ export function ChatInterface() {
       router.replace(`/?id=${newId}`);
     }
   }, [searchParams, currentConversationId, startNewChat, router]);
-
-
-  const saveConversation = useCallback((id: string, updatedMessages: Message[], updatedPledges?: string[], title?: string) => {
-    if (!id || typeof window === 'undefined') return;
-    let currentTitle = title;
-    
-    const existingConvoRaw = localStorage.getItem(`${CONVERSATION_KEY_PREFIX}${id}`);
-    if (existingConvoRaw) {
-       try {
-           const existingConvo = JSON.parse(existingConvoRaw);
-           if (existingConvo.title && !title) {
-               currentTitle = existingConvo.title;
-           }
-       } catch (error) {
-           console.error("Could not parse existing conversation", error)
-       }
-    }
-    
-   const conversation: Conversation = {
-       id: id,
-       title: currentTitle || 'New Conversation',
-       messages: updatedMessages,
-       pledges: updatedPledges || pledges,
-       timestamp: new Date().toISOString(),
-   };
-   localStorage.setItem(`${CONVERSATION_KEY_PREFIX}${id}`, JSON.stringify(conversation));
-   window.dispatchEvent(new StorageEvent('storage', { key: `${CONVERSATION_KEY_PREFIX}${id}`, storageArea: localStorage }));
-  }, [pledges]);
 
 
   useEffect(() => {
