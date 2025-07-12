@@ -9,10 +9,9 @@
  * - SummarizeConversationOutput - The return type for the summarizeConversation function.
  */
 
-import {ai, fallbackModel} from '@/ai/genkit';
+import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type {Message} from '@/lib/types';
-import { openRouterFallback } from '../tools/openrouter-fallback';
 
 const SummarizeConversationInputSchema = z.object({
   messages: z.array(
@@ -67,13 +66,38 @@ const summarizeConversationFlow = ai.defineFlow(
     } catch (error) {
        console.error("Primary model failed, trying fallback:", error);
        try {
-        const fallbackResponse = await openRouterFallback({
-          model: 'openai/gpt-4o',
-          messages: [{ role: 'user', content: `Based on the following conversation, create a very short, concise title (5 words maximum). Conversation: ${JSON.stringify(input.messages)}` }]
+        const apiKey = process.env.OPENROUTER_API_KEY;
+        if (!apiKey) throw new Error("OpenRouter API key not configured.");
+        
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": process.env.YOUR_SITE_URL || 'http://localhost:9002',
+                "X-Title": process.env.YOUR_SITE_NAME || 'KWS Ai',
+            },
+            body: JSON.stringify({
+                model: "openai/gpt-4o",
+                messages: [{ role: 'user', content: `Based on the following conversation, create a very short, concise title (5 words maximum). Conversation: ${JSON.stringify(input.messages)}` }]
+            }),
         });
-        return { title: fallbackResponse.content.replace(/"/g, "") };
+        
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`OpenRouter API Error: ${response.status} ${errorBody}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices[0]?.message?.content;
+        if (!content) {
+            throw new Error("OpenRouter returned an empty response.");
+        }
+        
+        return { title: content.replace(/"/g, "") };
+
        } catch (fallbackError) {
-        console.error("Error in summarizeConversationFlow:", fallbackError);
+        console.error("Fallback failed in summarizeConversationFlow:", fallbackError);
         return { title: "Chat" };
        }
     }
