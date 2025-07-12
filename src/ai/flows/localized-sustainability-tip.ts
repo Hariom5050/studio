@@ -56,45 +56,7 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
     outputSchema: LocalizedSustainabilityTipOutputSchema,
   },
   async input => {
-    try {
-      const {output} = await prompt(input);
-      return output!;
-    } catch (error) {
-      console.error("Primary model failed, trying fallback:", error);
-      try {
-        const apiKey = process.env.OPENROUTER_API_KEY;
-        if (!apiKey) throw new Error("OpenRouter API key not configured.");
-        
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json",
-                "HTTP-Referer": process.env.YOUR_SITE_URL || 'http://localhost:9002',
-                "X-Title": process.env.YOUR_SITE_NAME || 'KWS Ai',
-            },
-            body: JSON.stringify({
-                model: "openai/gpt-4o",
-                messages: [{ role: 'user', content: `You are an AI assistant specialized in providing localized sustainability tips. Based on the user's location (${input.location}), provide one relevant sustainability tip.` }]
-            }),
-        });
-
-        if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`OpenRouter API Error: ${response.status} ${errorBody}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices[0]?.message?.content;
-        if (!content) {
-            throw new Error("OpenRouter returned an empty response.");
-        }
-        return { tip: content };
-         
-      } catch (fallbackError) {
-        console.error("Fallback failed in localizedSustainabilityTipFlow:", fallbackError);
-        return { tip: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
-      }
-    }
+    const {output} = await prompt(input);
+    return output!;
   }
 );

@@ -47,56 +47,7 @@ const encouragePledgeFlow = ai.defineFlow(
     outputSchema: EncouragePledgeOutputSchema,
   },
   async input => {
-    try {
-      const {output} = await prompt(input);
-      return output!;
-    } catch (error) {
-      console.error("Primary model failed, trying fallback:", error);
-      try {
-        const apiKey = process.env.OPENROUTER_API_KEY;
-        if (!apiKey) throw new Error("OpenRouter API key not configured.");
-        
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-              "Authorization": `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-              "HTTP-Referer": process.env.YOUR_SITE_URL || 'http://localhost:9002',
-              "X-Title": process.env.YOUR_SITE_NAME || 'KWS Ai',
-          },
-          body: JSON.stringify({
-            model: "openai/gpt-4o",
-            messages: [{ role: 'user', content: `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world. Based on the conversation history (${input.conversationHistory}), suggest a few pledge ideas and provide an encouraging message. You must output a valid JSON object with 'encouragement' and 'pledgeIdeas' keys.` }],
-            response_format: { type: "json_object" },
-          }),
-        });
-
-        if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`OpenRouter API Error: ${response.status} ${errorBody}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices[0]?.message?.content;
-        
-        if (!content) {
-            throw new Error("OpenRouter returned an empty response.");
-        }
-        
-        try {
-          const parsed = JSON.parse(content);
-          return EncouragePledgeOutputSchema.parse(parsed);
-        } catch (e) {
-            console.error("Failed to parse fallback response for pledge encouragement", e);
-            throw new Error("Fallback failed to return valid JSON for pledge.");
-        }
-      } catch (fallbackError) {
-        console.error("Fallback failed in encouragePledgeFlow:", fallbackError);
-        return {
-          encouragement: "Let's make a small promise to our planet! What's one simple action you'd like to take for a better world?",
-          pledgeIdeas: ["Use a reusable water bottle.", "Spend 5 minutes learning about a new culture.", "Share a positive comment online."]
-        };
-      }
-    }
+    const {output} = await prompt(input);
+    return output!;
   }
 );

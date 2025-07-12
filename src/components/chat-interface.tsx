@@ -90,7 +90,7 @@ export function ChatInterface() {
             } catch (error) {
                 console.error("Error getting sustainability tip:", error);
                 setMessages(prev => {
-                    const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" }];
+                    const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "I'm having a little trouble connecting to my knowledge base right now. Please try again in a moment." }];
                     saveConversation(newConvoId, updated, []);
                     return updated;
                 });
@@ -100,8 +100,9 @@ export function ChatInterface() {
         },
         (error) => {
             console.warn("Geolocation denied:", error.message);
-            setMessages(prev => {
-                const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" }];
+            // Silently fail if location is denied, the user can still chat.
+             setMessages(prev => {
+                const updated = [...prev];
                 saveConversation(newConvoId, updated, []);
                 return updated;
             });
@@ -233,7 +234,7 @@ export function ChatInterface() {
 
     } catch (error) {
       console.error("Error with AI flow:", error);
-      const errorMessage: Message = { id: crypto.randomUUID(), role: 'assistant', content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
+      const errorMessage: Message = { id: crypto.randomUUID(), role: 'assistant', content: "I'm having a little trouble connecting to my knowledge base right now. This could be due to a missing or invalid API key. Please check your configuration and try again." };
       const finalMessages = [...newMessages, errorMessage];
       setMessages(finalMessages);
       saveConversation(currentConversationId, finalMessages, pledges);

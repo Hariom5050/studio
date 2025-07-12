@@ -78,51 +78,9 @@ const contextualAwarenessFlow = ai.defineFlow(
     outputSchema: ContextualAwarenessOutputSchema,
   },
   async (input) => {
-    try {
-      const {output} = await contextualAwarenessPrompt(input, {
-        tools: input.webSearchEnabled ? [webSearch] : [],
-      });
-      return output!;
-    } catch (error) {
-      console.error("Primary model failed, trying fallback:", error);
-      try {
-        const apiKey = process.env.OPENROUTER_API_KEY;
-        if (!apiKey) throw new Error("OpenRouter API key not configured.");
-        
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": process.env.YOUR_SITE_URL || 'http://localhost:9002',
-            "X-Title": process.env.YOUR_SITE_NAME || 'KWS Ai',
-          },
-          body: JSON.stringify({
-            model: "openai/gpt-4o",
-            messages: [
-              { role: 'system', content: `You are KWS Ai, a friendly and motivational guide dedicated to creating a better world. Your purpose is to inspire users to take positive actions and join a global movement for change. Continue the conversation in a way that is helpful, engaging, and uplifting. Use the previous conversation history to inform your response and maintain a consistent, encouraging tone. Do not repeat yourself. Always respond as KWS Ai, your friendly guide to a better world.`},
-              ...input.conversationHistory || [],
-              { role: 'user', content: input.message }
-            ]
-          }),
-        });
-        
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new Error(`OpenRouter API Error: ${response.status} ${errorBody}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices[0]?.message?.content;
-        if (!content) {
-            throw new Error("OpenRouter returned an empty response.");
-        }
-        return { response: content };
-
-      } catch (fallbackError) {
-         console.error("Fallback failed in contextualAwarenessFlow:", fallbackError);
-         return { response: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
-      }
-    }
+    const {output} = await contextualAwarenessPrompt(input, {
+      tools: input.webSearchEnabled ? [webSearch] : [],
+    });
+    return output!;
   }
 );
