@@ -28,78 +28,85 @@ export const webSearch = ai.defineTool(
     }),
   },
   async (input) => {
-    const apiKey = process.env.SERPER_API_KEY;
+    const apiKeys = process.env.SERPER_API_KEYS?.split(',').map(k => k.trim()).filter(Boolean);
 
-    if (!apiKey) {
-      console.error(
-        'Serper API key is not configured.'
-      );
+    if (!apiKeys || apiKeys.length === 0) {
+      console.error('Serper API key(s) are not configured.');
       return {
         results: [
           {
             title: 'Web Search Not Configured',
             link: '#',
             snippet:
-              'The web search tool is not configured. Please set the SERPER_API_KEY environment variable. You can get a free key from serper.dev.',
+              'The web search tool is not configured. Please set the SERPER_API_KEYS environment variable. You can get a free key from serper.dev.',
           },
         ],
       };
     }
 
     const url = `https://google.serper.dev/search`;
+    let lastError: any = null;
 
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'X-API-KEY': apiKey,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ q: input.query })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Serper API Error:', errorData);
-        return {
-          results: [{
-            title: "Web Search Failed",
-            link: "#",
-            snippet: `The web search API returned an error: ${errorData.message || 'Unknown error'}`
-          }]
+    for (const apiKey of apiKeys) {
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-API-KEY': apiKey,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ q: input.query })
+            });
+            
+            if (response.status === 401 || response.status === 403 || response.status === 429) {
+                console.warn(`Serper API key ending in ...${apiKey.slice(-4)} failed with status ${response.status}. Trying next key.`);
+                lastError = await response.json();
+                continue; // Try the next key
+            }
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Serper API Error:', errorData);
+                lastError = errorData;
+                continue; // Try the next key
+            }
+
+            const data = await response.json();
+            const results = (data.organic || []).map((item: any) => ({
+                title: item.title,
+                link: item.link,
+                snippet: item.snippet,
+            }));
+
+            if (results.length === 0) {
+                return {
+                results: [{
+                    title: "No results found",
+                    link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
+                    snippet: `Your search - ${input.query} - did not match any documents.`
+                }]
+                }
+            }
+
+            return { results }; // Success, exit the loop
+        } catch (error) {
+            console.error('Error during web search with a key:', error);
+            lastError = error;
+            continue; // Try the next key
         }
-      }
-
-      const data = await response.json();
-      const results = (data.organic || []).map((item: any) => ({
-        title: item.title,
-        link: item.link,
-        snippet: item.snippet,
-      }));
-
-      if (results.length === 0) {
-        return {
-          results: [{
-            title: "No results found",
-            link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
-            snippet: `Your search - ${input.query} - did not match any documents.`
-          }]
-        }
-      }
-
-      return { results };
-    } catch (error) {
-      console.error('Error during web search:', error);
-      return {
-        results: [
-          {
-            title: 'Search Failed',
-            link: '#',
-            snippet:
-              'An error occurred while trying to perform the web search. Please check the server logs for more details.',
-          },
-        ],
-      };
     }
+
+    // If all keys have failed
+    console.error('All Serper API keys failed. Last error:', lastError);
+    return {
+      results: [
+        {
+          title: 'Search Failed',
+          link: '#',
+          snippet:
+            'The web search failed after trying all available API keys. Please check the server logs for more details.',
+        },
+      ],
+    };
   }
 );
