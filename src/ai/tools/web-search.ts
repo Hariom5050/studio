@@ -14,9 +14,7 @@ const SearchResultSchema = z.object({
   title: z.string(),
   link: z.string(),
   snippet: z.string(),
-  source: z.string().optional(),
-  imageUrl: z.string().optional(),
-  date: z.string().optional(),
+  position: z.number().optional(),
 });
 
 export const webSearch = ai.defineTool(
@@ -88,7 +86,7 @@ export const webSearch = ai.defineTool(
                         title: "No results found",
                         link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
                         snippet: `Your search - ${input.query} - did not match any documents. Please try a different query.`,
-                        source: "Google Search",
+                        position: 1,
                     }]
                 }
             }
@@ -98,9 +96,7 @@ export const webSearch = ai.defineTool(
                 title: item.title,
                 link: item.link,
                 snippet: item.snippet,
-                source: item.source,
-                imageUrl: item.imageUrl,
-                date: item.date,
+                position: item.position,
             }));
 
             return { results }; // Success, exit the loop
@@ -120,6 +116,7 @@ export const webSearch = ai.defineTool(
           link: '#',
           snippet:
             'The web search failed after trying all available API keys. Please check the server logs for more details.',
+          position: 1,
         },
       ],
     };
