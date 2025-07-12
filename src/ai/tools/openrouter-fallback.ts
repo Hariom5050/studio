@@ -54,20 +54,20 @@ export const openRouterFallback = ai.defineTool(
       if (!response.ok) {
         const errorData = await response.json();
         console.error('OpenRouter API Error:', errorData);
-        throw new Error(`OpenRouter API Error: ${errorData.error?.message || 'Unknown error'}`);
+        return { content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
       }
 
       const data = await response.json();
       const content = data.choices[0]?.message?.content || '';
       
       if (!content) {
-        throw new Error('OpenRouter returned an empty response.');
+        return { content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
       }
 
       return { content };
     } catch (error) {
       console.error('Error during OpenRouter fallback call:', error);
-      throw error; // Re-throw to be caught by the flow's outer catch block
+      return { content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
     }
   }
 );
