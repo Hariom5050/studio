@@ -14,13 +14,14 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import {webSearch} from '@/ai/tools/web-search';
 import { fallbackGenerate } from '@/ai/fallback';
+import type { Message } from '@/lib/types';
 
 const ContextualAwarenessInputSchema = z.object({
   message: z.string().describe('The current user message.'),
   conversationHistory: z
     .array(
       z.object({
-        role: z.enum(['user', 'assistant']),
+        role: z.enum(['user', 'assistant', 'system']),
         content: z.string(),
       })
     )
@@ -66,9 +67,11 @@ const contextualAwarenessPrompt = ai.definePrompt({
   },
   system: systemPrompt,
   prompt: `Conversation History:
-      {{#each conversationHistory}}
-        {{this.role}}: {{this.content}}
-      {{/each}}
+      {{#if conversationHistory}}
+        {{#each conversationHistory}}
+          {{this.role}}: {{this.content}}
+        {{/each}}
+      {{/if}}
     
       User Message: {{message}}
       KWS Ai Response: `,
@@ -85,14 +88,22 @@ const contextualAwarenessFlow = ai.defineFlow(
         const {output} = await contextualAwarenessPrompt(input, {
         tools: input.webSearchEnabled ? [webSearch] : [],
         });
-        return output!;
+        if (!output) {
+            throw new Error("Primary model returned no output.");
+        }
+        return output;
     } catch (error) {
         console.error("Primary model failed in contextualAwarenessFlow, trying fallback:", error);
         try {
+            const historyForFallback = (input.conversationHistory || []).map(m => ({
+                role: m.role as 'user' | 'assistant' | 'system',
+                content: m.content
+            }));
+            
             const fallbackResponse = await fallbackGenerate({
                 messages: [
                     { role: 'system', content: systemPrompt },
-                    ...input.conversationHistory || [],
+                    ...historyForFallback,
                     { role: 'user', content: input.message }
                 ]
             });
