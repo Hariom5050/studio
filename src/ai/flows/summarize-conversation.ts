@@ -79,7 +79,9 @@ const summarizeConversationFlow = ai.defineFlow(
             },
             body: JSON.stringify({
                 model: "openai/gpt-4o",
-                messages: [{ role: 'user', content: `Based on the following conversation, create a very short, concise title (5 words maximum). Conversation: ${JSON.stringify(input.messages)}` }]
+                messages: [
+                    { role: 'user', content: `Based on the following conversation, create a very short, concise title (5 words maximum). Conversation: ${JSON.stringify(input.messages)}` }
+                ]
             }),
         });
         

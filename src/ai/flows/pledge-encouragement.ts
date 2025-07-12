@@ -68,7 +68,6 @@ const encouragePledgeFlow = ai.defineFlow(
             model: "openai/gpt-4o",
             messages: [{ role: 'user', content: `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world. Based on the conversation history (${input.conversationHistory}), suggest a few pledge ideas and provide an encouraging message. You must output a valid JSON object with 'encouragement' and 'pledgeIdeas' keys.` }],
             response_format: { type: "json_object" },
-            tool_choice: "auto",
           }),
         });
 
@@ -84,7 +83,6 @@ const encouragePledgeFlow = ai.defineFlow(
             throw new Error("OpenRouter returned an empty response.");
         }
         
-        // Attempt to parse the JSON from the fallback
         try {
           const parsed = JSON.parse(content);
           return EncouragePledgeOutputSchema.parse(parsed);
