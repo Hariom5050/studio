@@ -12,6 +12,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type {Message} from '@/lib/types';
+import { fallbackGenerate } from '@/ai/fallback';
 
 const SummarizeConversationInputSchema = z.object({
   messages: z.array(
@@ -39,18 +40,20 @@ export async function summarizeConversation(
   return summarizeConversationFlow({messages: historyForSummary});
 }
 
-const prompt = ai.definePrompt({
-  name: 'summarizeConversationPrompt',
-  input: {schema: SummarizeConversationInputSchema},
-  output: {schema: SummarizeConversationOutputSchema},
-  prompt: `Based on the following conversation, create a very short, concise title (5 words maximum). This title will be used to identify the conversation in a list.
+const promptTemplate = `Based on the following conversation, create a very short, concise title (5 words maximum). This title will be used to identify the conversation in a list.
 
 Conversation History:
 {{#each messages}}
   {{this.role}}: {{this.content}}
 {{/each}}
 
-Generate only the title.`,
+Generate only the title.`;
+
+const prompt = ai.definePrompt({
+  name: 'summarizeConversationPrompt',
+  input: {schema: SummarizeConversationInputSchema},
+  output: {schema: SummarizeConversationOutputSchema},
+  prompt: promptTemplate,
 });
 
 const summarizeConversationFlow = ai.defineFlow(
@@ -60,7 +63,23 @@ const summarizeConversationFlow = ai.defineFlow(
     outputSchema: SummarizeConversationOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+        const {output} = await prompt(input);
+        return output!;
+    } catch (error) {
+        console.error("Primary model failed in summarizeConversationFlow, trying fallback:", error);
+        try {
+            const fallbackResponse = await fallbackGenerate({
+                messages: [
+                    { role: 'system', content: 'You are an expert at creating short, concise titles for conversations. The title should be 5 words maximum.' },
+                    { role: 'user', content: `Create a title for this conversation: ${JSON.stringify(input.messages)}` }
+                ]
+            });
+            return { title: fallbackResponse.replace(/"/g, '') }; // Remove quotes from title if any
+        } catch (fallbackError) {
+             console.error("Fallback failed in summarizeConversationFlow:", fallbackError);
+             return { title: 'New Chat' };
+        }
+    }
   }
 );

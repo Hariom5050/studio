@@ -13,6 +13,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import {webSearch} from '@/ai/tools/web-search';
+import { fallbackGenerate } from '@/ai/fallback';
 
 const ContextualAwarenessInputSchema = z.object({
   message: z.string().describe('The current user message.'),
@@ -47,6 +48,14 @@ export async function contextualAwareness(
   return contextualAwarenessFlow(input);
 }
 
+const systemPrompt = `You are KWS Ai, a friendly and motivational guide dedicated to creating a better world. Your purpose is to inspire users to take positive actions and join a global movement for change.
+    
+      Continue the conversation in a way that is helpful, engaging, and uplifting. Use the previous conversation history to inform your response and maintain a consistent, encouraging tone.
+      
+      If you need to find out about recent events or information that you don't know to answer the user's question, you must use the webSearch tool.
+    
+      Do not repeat yourself. Always respond as KWS Ai, your friendly guide to a better world.`;
+
 const contextualAwarenessPrompt = ai.definePrompt({
   name: 'contextualAwarenessPrompt',
   input: {
@@ -55,13 +64,7 @@ const contextualAwarenessPrompt = ai.definePrompt({
   output: {
     schema: ContextualAwarenessOutputSchema,
   },
-  system: `You are KWS Ai, a friendly and motivational guide dedicated to creating a better world. Your purpose is to inspire users to take positive actions and join a global movement for change.
-    
-      Continue the conversation in a way that is helpful, engaging, and uplifting. Use the previous conversation history to inform your response and maintain a consistent, encouraging tone.
-      
-      If you need to find out about recent events or information that you don't know to answer the user's question, you must use the webSearch tool.
-    
-      Do not repeat yourself. Always respond as KWS Ai, your friendly guide to a better world.`,
+  system: systemPrompt,
   prompt: `Conversation History:
       {{#each conversationHistory}}
         {{this.role}}: {{this.content}}
@@ -78,9 +81,26 @@ const contextualAwarenessFlow = ai.defineFlow(
     outputSchema: ContextualAwarenessOutputSchema,
   },
   async (input) => {
-    const {output} = await contextualAwarenessPrompt(input, {
-      tools: input.webSearchEnabled ? [webSearch] : [],
-    });
-    return output!;
+    try {
+        const {output} = await contextualAwarenessPrompt(input, {
+        tools: input.webSearchEnabled ? [webSearch] : [],
+        });
+        return output!;
+    } catch (error) {
+        console.error("Primary model failed in contextualAwarenessFlow, trying fallback:", error);
+        try {
+            const fallbackResponse = await fallbackGenerate({
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    ...input.conversationHistory || [],
+                    { role: 'user', content: input.message }
+                ]
+            });
+            return { response: fallbackResponse };
+        } catch (fallbackError) {
+             console.error("Fallback failed in contextualAwarenessFlow:", fallbackError);
+             return { response: "I'm having a little trouble connecting to my knowledge base right now. Please try again in a moment." };
+        }
+    }
   }
 );

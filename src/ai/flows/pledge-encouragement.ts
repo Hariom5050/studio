@@ -12,6 +12,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { fallbackGenerate } from '@/ai/fallback';
 
 const EncouragePledgeInputSchema = z.object({
   conversationHistory: z.string().describe('The history of the conversation so far.'),
@@ -28,16 +29,17 @@ export async function encouragePledge(input: EncouragePledgeInput): Promise<Enco
   return encouragePledgeFlow(input);
 }
 
+const systemPrompt = `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world.`;
+const promptTemplate = `Based on the conversation history, suggest a few pledge ideas and provide an encouraging message.
+
+Conversation History: {{{conversationHistory}}}`;
+
 const prompt = ai.definePrompt({
   name: 'encouragePledgePrompt',
   input: {schema: EncouragePledgeInputSchema},
   output: {schema: EncouragePledgeOutputSchema},
-  prompt: `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world.
-
-  Based on the conversation history, suggest a few pledge ideas and provide an encouraging message.
-
-  Conversation History: {{{conversationHistory}}}
-  `,
+  system: systemPrompt,
+  prompt: promptTemplate,
 });
 
 const encouragePledgeFlow = ai.defineFlow(
@@ -47,7 +49,32 @@ const encouragePledgeFlow = ai.defineFlow(
     outputSchema: EncouragePledgeOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+        const {output} = await prompt(input);
+        return output!;
+    } catch (error) {
+        console.error("Primary model failed in encouragePledgeFlow, trying fallback:", error);
+        try {
+            const fallbackString = await fallbackGenerate({
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: `Based on this conversation history, suggest a few pledge ideas and provide an encouraging message in a JSON object with keys "encouragement" and "pledgeIdeas" (an array of strings): ${input.conversationHistory}` }
+                ],
+                json: true
+            });
+            const fallbackResponse = JSON.parse(fallbackString);
+            return fallbackResponse;
+        } catch (fallbackError) {
+             console.error("Fallback failed in encouragePledgeFlow:", fallbackError);
+             return { 
+                 encouragement: "Let's make a promise to our planet! What's one small action you'd like to take?",
+                 pledgeIdeas: [
+                     "Use a reusable water bottle for a week.",
+                     "Learn one new thing about a different culture.",
+                     "Share a positive comment online."
+                 ]
+             };
+        }
+    }
   }
 );
