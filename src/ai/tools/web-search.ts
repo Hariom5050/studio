@@ -1,3 +1,4 @@
+
 // src/ai/tools/web-search.ts
 'use server';
 /**
@@ -80,6 +81,7 @@ export const webSearch = ai.defineTool(
 
             const data = await response.json();
             
+            // This is the corrected logic. Serper API returns a different body when no results are found.
             if (!data.organic || data.organic.length === 0) {
                 return {
                     results: [{
