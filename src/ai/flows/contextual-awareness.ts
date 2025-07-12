@@ -83,8 +83,17 @@ const contextualAwarenessFlow = ai.defineFlow(
       });
       return output!;
     } catch (error) {
-      console.error("Error in contextualAwarenessFlow:", error);
-      return { response: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
+      console.error("Primary model failed, trying fallback:", error);
+      try {
+        const {output} = await contextualAwarenessPrompt(input, {
+          model: 'googleai/gemini-2.0-flash-preview',
+          tools: input.webSearchEnabled ? [webSearch] : [],
+        });
+        return output!;
+      } catch (fallbackError) {
+         console.error("Error in contextualAwarenessFlow:", fallbackError);
+         return { response: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
+      }
     }
   }
 );

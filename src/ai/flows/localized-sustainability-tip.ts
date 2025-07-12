@@ -59,8 +59,14 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
       const {output} = await prompt(input);
       return output!;
     } catch (error) {
-      console.error("Error in localizedSustainabilityTipFlow:", error);
-      return { tip: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
+      console.error("Primary model failed, trying fallback:", error);
+      try {
+         const {output} = await prompt(input, { model: 'googleai/gemini-2.0-flash-preview' });
+         return output!;
+      } catch (fallbackError) {
+        console.error("Error in localizedSustainabilityTipFlow:", fallbackError);
+        return { tip: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
+      }
     }
   }
 );
