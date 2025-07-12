@@ -47,7 +47,7 @@ export const webSearch = ai.defineTool(
       };
     }
 
-    const url = `https://google.serper.dev/news`;
+    const url = `https://google.serper.dev/search`;
     let lastError: any = null;
 
     for (const apiKey of apiKeys) {
@@ -79,8 +79,8 @@ export const webSearch = ai.defineTool(
             }
 
             const data = await response.json();
-            // The news endpoint returns `news` array instead of `organic`
-            const results = (data.news || []).map((item: any) => ({
+            // The search endpoint returns `organic` array
+            const results = (data.organic || []).map((item: any) => ({
                 title: item.title,
                 link: item.link,
                 snippet: item.snippet,
@@ -93,8 +93,8 @@ export const webSearch = ai.defineTool(
                 return {
                 results: [{
                     title: "No results found",
-                    link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}&tbm=nws`,
-                    snippet: `Your news search - ${input.query} - did not match any documents.`
+                    link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
+                    snippet: `Your search - ${input.query} - did not match any documents.`
                 }]
                 }
             }
