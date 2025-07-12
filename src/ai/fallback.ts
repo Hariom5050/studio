@@ -32,6 +32,7 @@ export async function fallbackGenerate(input: FallbackGenerateInput): Promise<st
   const { messages, json = false } = input;
   const primaryFallbackModel = 'gemma2-9b-it';
   const secondaryFallbackModel = 'llama3-70b-8192';
+  const tertiaryFallbackModel = 'mixtral-8x7b-32768';
   
   // The Groq API requires at least one message.
   if (!messages || messages.length === 0) {
@@ -83,7 +84,32 @@ export async function fallbackGenerate(input: FallbackGenerateInput): Promise<st
 
     } catch (secondaryError) {
         console.error(`Error calling Groq API with ${secondaryFallbackModel}:`, secondaryError);
-        throw new Error('The fallback service (Groq) also failed on the second attempt.');
+        console.log(`Secondary fallback failed. Trying tertiary fallback model: ${tertiaryFallbackModel}`);
+
+        // Third attempt with the tertiary fallback model
+        try {
+            const tertiaryChatCompletion = await groq.chat.completions.create({
+                messages: messages.map(({role, content}) => ({role, content})),
+                model: tertiaryFallbackModel,
+                temperature: 0.6,
+                max_tokens: 4096,
+                top_p: 0.95,
+                stream: false,
+                response_format: json ? { type: 'json_object' } : undefined,
+            });
+
+            const tertiaryContent = tertiaryChatCompletion.choices[0]?.message?.content;
+
+            if (!tertiaryContent) {
+                throw new Error("Groq API (tertiary fallback) returned an empty response.");
+            }
+
+            return tertiaryContent;
+
+        } catch (tertiaryError) {
+             console.error(`Error calling Groq API with ${tertiaryFallbackModel}:`, tertiaryError);
+             throw new Error('The fallback service (Groq) also failed on the third attempt.');
+        }
     }
   }
 }
