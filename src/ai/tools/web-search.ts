@@ -79,6 +79,18 @@ export const webSearch = ai.defineTool(
             }
 
             const data = await response.json();
+            
+            if (!data.organic || data.organic.length === 0) {
+                return {
+                    results: [{
+                        title: "No results found",
+                        link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
+                        snippet: `Your search - ${input.query} - did not match any documents. Please try a different query.`,
+                        source: "Google Search",
+                    }]
+                }
+            }
+            
             // The search endpoint returns `organic` array
             const results = (data.organic || []).map((item: any) => ({
                 title: item.title,
@@ -88,16 +100,6 @@ export const webSearch = ai.defineTool(
                 imageUrl: item.imageUrl,
                 date: item.date,
             }));
-
-            if (results.length === 0) {
-                return {
-                results: [{
-                    title: "No results found",
-                    link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
-                    snippet: `Your search - ${input.query} - did not match any documents.`
-                }]
-                }
-            }
 
             return { results }; // Success, exit the loop
         } catch (error) {
