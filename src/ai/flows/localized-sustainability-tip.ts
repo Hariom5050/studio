@@ -75,7 +75,7 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
             },
             body: JSON.stringify({
                 model: "openai/gpt-4o",
-                messages: [{ role: 'user', content: `Based on my location (${input.location}), give me one relevant sustainability tip.` }]
+                messages: [{ role: 'user', content: `You are an AI assistant specialized in providing localized sustainability tips. Based on the user's location (${input.location}), provide one relevant sustainability tip.` }]
             }),
         });
 

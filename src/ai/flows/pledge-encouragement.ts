@@ -37,12 +37,6 @@ const prompt = ai.definePrompt({
   Based on the conversation history, suggest a few pledge ideas and provide an encouraging message.
 
   Conversation History: {{{conversationHistory}}}
-
-  Output the encouragement and pledge ideas in the following format:
-  {
-    "encouragement": "[Encouraging message here]",
-    "pledgeIdeas": ["Pledge idea 1", "Pledge idea 2", "Pledge idea 3"]
-  }
   `,
 });
 
@@ -72,8 +66,9 @@ const encouragePledgeFlow = ai.defineFlow(
           },
           body: JSON.stringify({
             model: "openai/gpt-4o",
-            messages: [{ role: 'user', content: `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world. Based on the conversation history (${input.conversationHistory}), suggest a few pledge ideas and provide an encouraging message. Output the encouragement and pledge ideas in a valid JSON object with 'encouragement' and 'pledgeIdeas' keys.` }],
-            response_format: { type: "json_object" }
+            messages: [{ role: 'user', content: `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world. Based on the conversation history (${input.conversationHistory}), suggest a few pledge ideas and provide an encouraging message. You must output a valid JSON object with 'encouragement' and 'pledgeIdeas' keys.` }],
+            response_format: { type: "json_object" },
+            tool_choice: "auto",
           }),
         });
 

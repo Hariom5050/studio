@@ -100,6 +100,7 @@ const contextualAwarenessFlow = ai.defineFlow(
           body: JSON.stringify({
             model: "openai/gpt-4o",
             messages: [
+              { role: 'system', content: `You are KWS Ai, a friendly and motivational guide dedicated to creating a better world. Your purpose is to inspire users to take positive actions and join a global movement for change. Continue the conversation in a way that is helpful, engaging, and uplifting. Use the previous conversation history to inform your response and maintain a consistent, encouraging tone. Do not repeat yourself. Always respond as KWS Ai, your friendly guide to a better world.`},
               ...input.conversationHistory || [],
               { role: 'user', content: input.message }
             ]
