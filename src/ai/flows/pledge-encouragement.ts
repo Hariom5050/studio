@@ -1,3 +1,4 @@
+
 // pledge-encouragement.ts
 'use server';
 
@@ -9,8 +10,9 @@
  * - EncouragePledgeOutput - The return type for the encouragePledge function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, fallbackModel} from '@/ai/genkit';
 import {z} from 'genkit';
+import { openRouterFallback } from '../tools/openrouter-fallback';
 
 const EncouragePledgeInputSchema = z.object({
   conversationHistory: z.string().describe('The history of the conversation so far.'),
@@ -58,8 +60,22 @@ const encouragePledgeFlow = ai.defineFlow(
     } catch (error) {
       console.error("Primary model failed, trying fallback:", error);
       try {
-        const {output} = await prompt(input, { model: 'googleai/gemini-2.0-flash-preview' });
-        return output!;
+        const fallbackResponse = await openRouterFallback({
+          model: 'openai/gpt-4o',
+          messages: [{ role: 'user', content: `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world. Based on the conversation history (${input.conversationHistory}), suggest a few pledge ideas and provide an encouraging message. Output the encouragement and pledge ideas in a JSON object with 'encouragement' and 'pledgeIdeas' keys.` }]
+        });
+        
+        // Attempt to parse the JSON from the fallback
+        try {
+          const parsed = JSON.parse(fallbackResponse.content);
+          return EncouragePledgeOutputSchema.parse(parsed);
+        } catch (e) {
+            console.error("Failed to parse fallback response for pledge encouragement", e);
+            return {
+              encouragement: "Let's make a small promise to our planet! What's one simple action you'd like to take for a better world?",
+              pledgeIdeas: ["Use a reusable water bottle.", "Spend 5 minutes learning about a new culture.", "Share a positive comment online."]
+            };
+        }
       } catch (fallbackError) {
         console.error("Error in encouragePledgeFlow:", fallbackError);
         return {

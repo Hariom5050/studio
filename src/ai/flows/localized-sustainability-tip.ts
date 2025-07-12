@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Fetches and shares a localized sustainability tip based on the user's location.
@@ -7,8 +8,9 @@
  * - LocalizedSustainabilityTipOutput - The return type for the getLocalizedSustainabilityTip function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, fallbackModel} from '@/ai/genkit';
 import {z} from 'genkit';
+import { openRouterFallback } from '../tools/openrouter-fallback';
 
 const LocalizedSustainabilityTipInputSchema = z.object({
   location: z
@@ -61,8 +63,11 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
     } catch (error) {
       console.error("Primary model failed, trying fallback:", error);
       try {
-         const {output} = await prompt(input, { model: 'googleai/gemini-2.0-flash-preview' });
-         return output!;
+         const fallbackResponse = await openRouterFallback({
+            model: 'openai/gpt-4o',
+            messages: [{ role: 'user', content: `Based on the user's location (${input.location}), provide a relevant sustainability tip.`}]
+          });
+         return { tip: fallbackResponse.content };
       } catch (fallbackError) {
         console.error("Error in localizedSustainabilityTipFlow:", fallbackError);
         return { tip: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };

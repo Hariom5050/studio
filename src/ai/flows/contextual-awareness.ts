@@ -1,3 +1,4 @@
+
 // src/ai/flows/contextual-awareness.ts
 'use server';
 
@@ -9,9 +10,10 @@
  * - ContextualAwarenessOutput - The return type for the contextualAwareness function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, fallbackModel} from '@/ai/genkit';
 import {z} from 'genkit';
 import {webSearch} from '@/ai/tools/web-search';
+import { openRouterFallback } from '../tools/openrouter-fallback';
 
 const ContextualAwarenessInputSchema = z.object({
   message: z.string().describe('The current user message.'),
@@ -85,11 +87,14 @@ const contextualAwarenessFlow = ai.defineFlow(
     } catch (error) {
       console.error("Primary model failed, trying fallback:", error);
       try {
-        const {output} = await contextualAwarenessPrompt(input, {
-          model: 'googleai/gemini-2.0-flash-preview',
-          tools: input.webSearchEnabled ? [webSearch] : [],
+        const fallbackResponse = await openRouterFallback({
+          model: 'openai/gpt-4o',
+          messages: [
+            ...input.conversationHistory || [],
+            { role: 'user', content: input.message }
+          ]
         });
-        return output!;
+        return { response: fallbackResponse.content };
       } catch (fallbackError) {
          console.error("Error in contextualAwarenessFlow:", fallbackError);
          return { response: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };

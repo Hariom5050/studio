@@ -9,9 +9,10 @@
  * - SummarizeConversationOutput - The return type for the summarizeConversation function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, fallbackModel} from '@/ai/genkit';
 import {z} from 'genkit';
 import type {Message} from '@/lib/types';
+import { openRouterFallback } from '../tools/openrouter-fallback';
 
 const SummarizeConversationInputSchema = z.object({
   messages: z.array(
@@ -66,11 +67,14 @@ const summarizeConversationFlow = ai.defineFlow(
     } catch (error) {
        console.error("Primary model failed, trying fallback:", error);
        try {
-        const {output} = await prompt(input, { model: 'googleai/gemini-2.0-flash-preview' });
-        return output!;
+        const fallbackResponse = await openRouterFallback({
+          model: 'openai/gpt-4o',
+          messages: [{ role: 'user', content: `Based on the following conversation, create a very short, concise title (5 words maximum). Conversation: ${JSON.stringify(input.messages)}` }]
+        });
+        return { title: fallbackResponse.content.replace(/"/g, "") };
        } catch (fallbackError) {
         console.error("Error in summarizeConversationFlow:", fallbackError);
-        return { title: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
+        return { title: "Chat" };
        }
     }
   }
