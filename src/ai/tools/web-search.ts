@@ -13,6 +13,9 @@ const SearchResultSchema = z.object({
   title: z.string(),
   link: z.string(),
   snippet: z.string(),
+  source: z.string().optional(),
+  imageUrl: z.string().optional(),
+  date: z.string().optional(),
 });
 
 export const webSearch = ai.defineTool(
@@ -21,7 +24,7 @@ export const webSearch = ai.defineTool(
     description:
       'Use this tool to get up-to-date information on recent events, news, or topics the AI model might not have knowledge of. Can also be used to find current information on any topic.',
     inputSchema: z.object({
-      query: z.string().describe('The search query.'),
+      query: z.string().describe('The search query for news and recent events.'),
     }),
     outputSchema: z.object({
       results: z.array(SearchResultSchema),
@@ -44,7 +47,7 @@ export const webSearch = ai.defineTool(
       };
     }
 
-    const url = `https://google.serper.dev/search`;
+    const url = `https://google.serper.dev/news`;
     let lastError: any = null;
 
     for (const apiKey of apiKeys) {
@@ -55,7 +58,11 @@ export const webSearch = ai.defineTool(
                     'X-API-KEY': apiKey,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ q: input.query })
+                body: JSON.stringify({ 
+                    q: input.query,
+                    gl: 'in', // Geolocation for India
+                    tbs: 'qdr:w' // last week
+                })
             });
             
             if (response.status === 401 || response.status === 403 || response.status === 429) {
@@ -72,18 +79,22 @@ export const webSearch = ai.defineTool(
             }
 
             const data = await response.json();
-            const results = (data.organic || []).map((item: any) => ({
+            // The news endpoint returns `news` array instead of `organic`
+            const results = (data.news || []).map((item: any) => ({
                 title: item.title,
                 link: item.link,
                 snippet: item.snippet,
+                source: item.source,
+                imageUrl: item.imageUrl,
+                date: item.date,
             }));
 
             if (results.length === 0) {
                 return {
                 results: [{
                     title: "No results found",
-                    link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
-                    snippet: `Your search - ${input.query} - did not match any documents.`
+                    link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}&tbm=nws`,
+                    snippet: `Your news search - ${input.query} - did not match any documents.`
                 }]
                 }
             }
