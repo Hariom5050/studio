@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
+import { webSearch } from '@/ai/tools/web-search';
 
 const ConversationGuidanceInputSchema = z.object({
   topic: z
@@ -20,6 +21,10 @@ const ConversationGuidanceInputSchema = z.object({
     ),
   userMessage: z.string().describe('The user message to respond to.'),
   conversationHistory: z.string().describe('The history of the conversation.'),
+  webSearchEnabled: z
+    .boolean()
+    .optional()
+    .describe('Whether to enable web search for the AI.'),
 });
 export type ConversationGuidanceInput = z.infer<typeof ConversationGuidanceInputSchema>;
 
@@ -39,6 +44,8 @@ const prompt = ai.definePrompt({
   prompt: `You are KWS Ai, a helpful and friendly AI assistant that guides conversations on important topics.
 
   The current topic is: {{{topic}}}
+  
+  If you need to find out about recent events or information that you don't know to answer the user's question, you must use the webSearch tool. This is especially important for news, current events, or any topic where up-to-date information is critical.
 
   Here is the conversation history:
   {{conversationHistory}}
@@ -59,7 +66,9 @@ const conversationGuidanceFlow = ai.defineFlow(
     outputSchema: ConversationGuidanceOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const {output} = await prompt(input, {
+        tools: input.webSearchEnabled ? [webSearch] : [],
+    });
     return output!;
   }
 );

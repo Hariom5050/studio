@@ -17,6 +17,10 @@ import { webSearch } from '@/ai/tools/web-search';
 
 const EncouragePledgeInputSchema = z.object({
   conversationHistory: z.string().describe('The history of the conversation so far.'),
+   webSearchEnabled: z
+    .boolean()
+    .optional()
+    .describe('Whether to enable web search for the AI.'),
 });
 export type EncouragePledgeInput = z.infer<typeof EncouragePledgeInputSchema>;
 
@@ -41,7 +45,6 @@ const prompt = ai.definePrompt({
   output: {schema: EncouragePledgeOutputSchema},
   system: systemPrompt,
   prompt: promptTemplate,
-  tools: [webSearch]
 });
 
 const encouragePledgeFlow = ai.defineFlow(
@@ -52,7 +55,9 @@ const encouragePledgeFlow = ai.defineFlow(
   },
   async input => {
     try {
-        const {output} = await prompt(input);
+        const {output} = await prompt(input, {
+            tools: input.webSearchEnabled ? [webSearch] : [],
+        });
         return output!;
     } catch (error) {
         console.error("Primary model failed in encouragePledgeFlow, trying fallback:", error);

@@ -17,6 +17,10 @@ const LocalizedSustainabilityTipInputSchema = z.object({
   location: z
     .string()
     .describe("The user's location, including city and country."),
+  webSearchEnabled: z
+    .boolean()
+    .optional()
+    .describe('Whether to enable web search for the AI.'),
 });
 export type LocalizedSustainabilityTipInput = z.infer<
   typeof LocalizedSustainabilityTipInputSchema
@@ -50,7 +54,6 @@ const prompt = ai.definePrompt({
   output: {schema: LocalizedSustainabilityTipOutputSchema},
   system: systemPrompt,
   prompt: promptTemplate,
-  tools: [webSearch],
 });
 
 const localizedSustainabilityTipFlow = ai.defineFlow(
@@ -61,7 +64,9 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
   },
   async input => {
     try {
-        const {output} = await prompt(input);
+        const {output} = await prompt(input, {
+            tools: input.webSearchEnabled ? [webSearch] : [],
+        });
         return output!;
     } catch(error) {
         console.error("Primary model failed in localizedSustainabilityTipFlow, trying fallback:", error);

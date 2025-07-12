@@ -81,7 +81,7 @@ export function ChatInterface() {
             const { latitude, longitude } = position.coords;
             const location = `lat: ${latitude}, lon: ${longitude}`;
             try {
-                const tip = await getLocalizedSustainabilityTip({ location });
+                const tip = await getLocalizedSustainabilityTip({ location, webSearchEnabled: isWebSearchEnabled });
                 setMessages(prev => {
                     const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: tip.tip }];
                     saveConversation(newConvoId, updated, []);
@@ -109,7 +109,7 @@ export function ChatInterface() {
             setIsLoading(false);
         }
     );
-  }, [saveConversation]);
+  }, [saveConversation, isWebSearchEnabled]);
 
   useEffect(() => {
     const conversationIdFromUrl = searchParams.get('id');
@@ -219,7 +219,7 @@ export function ChatInterface() {
 
       if(userMessageCount === 3 && !pledgeOffered) {
         setPledgeOffered(true);
-        const pledgeResponse = await encouragePledge({ conversationHistory: JSON.stringify(conversationHistory) });
+        const pledgeResponse = await encouragePledge({ conversationHistory: JSON.stringify(conversationHistory), webSearchEnabled: isWebSearchEnabled });
         responseContent = pledgeResponse.encouragement;
         responsePledgeIdeas = pledgeResponse.pledgeIdeas;
       } else {
