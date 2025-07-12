@@ -265,7 +265,7 @@ export function ChatInterface() {
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Share your thoughts..."
+              placeholder="How's the weather report"
               rows={1}
               className="flex-1 resize-none"
               onKeyDown={(e) => {
