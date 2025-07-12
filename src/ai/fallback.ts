@@ -29,7 +29,9 @@ export async function fallbackGenerate(input: FallbackGenerateInput): Promise<st
     throw new Error('Groq API key not configured. Please set the GROQ_API_KEY environment variable.');
   }
 
-  const { model = 'gemma2-9b-it', messages, json = false } = input;
+  const { messages, json = false } = input;
+  const primaryFallbackModel = 'gemma2-9b-it';
+  const secondaryFallbackModel = 'llama3-70b-8192';
   
   // The Groq API requires at least one message.
   if (!messages || messages.length === 0) {
@@ -37,13 +39,14 @@ export async function fallbackGenerate(input: FallbackGenerateInput): Promise<st
   }
 
   try {
+    // First attempt with the primary fallback model
     const chatCompletion = await groq.chat.completions.create({
-      messages: messages.map(({role, content}) => ({role, content})), // Ensure only role and content are passed
-      model,
+      messages: messages.map(({role, content}) => ({role, content})),
+      model: primaryFallbackModel,
       temperature: 0.7,
       max_tokens: 1024,
       top_p: 1,
-      stream: false, // We will not stream for the fallback to keep it simple
+      stream: false,
       response_format: json ? { type: 'json_object' } : undefined,
     });
     
@@ -55,7 +58,32 @@ export async function fallbackGenerate(input: FallbackGenerateInput): Promise<st
 
     return content;
   } catch (error) {
-    console.error(`Error calling Groq API (${model}):`, error);
-    throw new Error('The fallback service (Groq) also failed.');
+    console.error(`Error calling Groq API with ${primaryFallbackModel}:`, error);
+    console.log(`Primary fallback failed. Trying secondary fallback model: ${secondaryFallbackModel}`);
+    
+    // Second attempt with the secondary fallback model
+    try {
+        const secondaryChatCompletion = await groq.chat.completions.create({
+            messages: messages.map(({role, content}) => ({role, content})),
+            model: secondaryFallbackModel,
+            temperature: 0.7,
+            max_tokens: 1024,
+            top_p: 1,
+            stream: false,
+            response_format: json ? { type: 'json_object' } : undefined,
+        });
+
+        const secondaryContent = secondaryChatCompletion.choices[0]?.message?.content;
+
+        if (!secondaryContent) {
+            throw new Error("Groq API (secondary fallback) returned an empty response.");
+        }
+
+        return secondaryContent;
+
+    } catch (secondaryError) {
+        console.error(`Error calling Groq API with ${secondaryFallbackModel}:`, secondaryError);
+        throw new Error('The fallback service (Groq) also failed on the second attempt.');
+    }
   }
 }
