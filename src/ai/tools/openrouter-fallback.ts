@@ -42,8 +42,8 @@ export const openRouterFallback = ai.defineTool(
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': process.env.YOUR_SITE_URL || '',
-          'X-Title': process.env.YOUR_SITE_NAME || '',
+          'HTTP-Referer': process.env.YOUR_SITE_URL || 'http://localhost:9002',
+          'X-Title': process.env.YOUR_SITE_NAME || 'KWS Ai',
         },
         body: JSON.stringify({
           model: input.model,
@@ -52,22 +52,23 @@ export const openRouterFallback = ai.defineTool(
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.text();
         console.error('OpenRouter API Error:', errorData);
-        return { content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
+        throw new Error(`OpenRouter API Error: ${response.status} ${errorData}`);
       }
 
       const data = await response.json();
       const content = data.choices[0]?.message?.content || '';
       
       if (!content) {
-        return { content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
+         throw new Error("OpenRouter returned an empty response.");
       }
 
       return { content };
     } catch (error) {
       console.error('Error during OpenRouter fallback call:', error);
-      return { content: "Oops! Your KWS Ai is taking a quick break. Please try again in a little while!" };
+      // Re-throwing the error to be caught by the calling flow
+      throw error;
     }
   }
 );
