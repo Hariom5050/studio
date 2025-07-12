@@ -11,6 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { fallbackGenerate } from '@/ai/fallback';
+import { webSearch } from '@/ai/tools/web-search';
 
 const LocalizedSustainabilityTipInputSchema = z.object({
   location: z
@@ -38,7 +39,7 @@ export async function getLocalizedSustainabilityTip(
   return localizedSustainabilityTipFlow(input);
 }
 
-const systemPrompt = `You are an AI assistant specialized in providing localized sustainability tips.`;
+const systemPrompt = `You are an AI assistant specialized in providing localized sustainability tips. Use the webSearch tool to find relevant and current information if needed.`;
 const promptTemplate = `Based on the user's location, provide a relevant sustainability tip.
 
 Location: {{{location}}}`;
@@ -48,7 +49,8 @@ const prompt = ai.definePrompt({
   input: {schema: LocalizedSustainabilityTipInputSchema},
   output: {schema: LocalizedSustainabilityTipOutputSchema},
   system: systemPrompt,
-  prompt: promptTemplate
+  prompt: promptTemplate,
+  tools: [webSearch],
 });
 
 const localizedSustainabilityTipFlow = ai.defineFlow(

@@ -13,6 +13,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { fallbackGenerate } from '@/ai/fallback';
+import { webSearch } from '@/ai/tools/web-search';
 
 const EncouragePledgeInputSchema = z.object({
   conversationHistory: z.string().describe('The history of the conversation so far.'),
@@ -29,7 +30,7 @@ export async function encouragePledge(input: EncouragePledgeInput): Promise<Enco
   return encouragePledgeFlow(input);
 }
 
-const systemPrompt = `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world.`;
+const systemPrompt = `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world. Use the webSearch tool to find creative and relevant ideas if needed.`;
 const promptTemplate = `Based on the conversation history, suggest a few pledge ideas and provide an encouraging message.
 
 Conversation History: {{{conversationHistory}}}`;
@@ -40,6 +41,7 @@ const prompt = ai.definePrompt({
   output: {schema: EncouragePledgeOutputSchema},
   system: systemPrompt,
   prompt: promptTemplate,
+  tools: [webSearch]
 });
 
 const encouragePledgeFlow = ai.defineFlow(
