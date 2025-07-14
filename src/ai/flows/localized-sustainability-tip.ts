@@ -64,8 +64,9 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
   },
   async input => {
     try {
+        const useWebSearch = input.webSearchEnabled && !!process.env.SERPER_API_KEYS;
         const {output} = await prompt(input, {
-            tools: input.webSearchEnabled ? [webSearch] : [],
+            tools: useWebSearch ? [webSearch] : [],
         });
         return output!;
     } catch(error) {

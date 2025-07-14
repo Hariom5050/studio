@@ -85,8 +85,9 @@ const contextualAwarenessFlow = ai.defineFlow(
   },
   async (input) => {
     try {
+        const useWebSearch = input.webSearchEnabled && !!process.env.SERPER_API_KEYS;
         const {output} = await contextualAwarenessPrompt(input, {
-        tools: input.webSearchEnabled ? [webSearch] : [],
+        tools: useWebSearch ? [webSearch] : [],
         });
         if (!output) {
             throw new Error("Primary model returned no output.");
