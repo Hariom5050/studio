@@ -26,7 +26,9 @@ if (process.env.GROQ_API_KEY) {
 
 export async function fallbackGenerate(input: FallbackGenerateInput): Promise<string> {
   if (!groq) {
-    throw new Error('Groq API key not configured. Please set the GROQ_API_KEY environment variable.');
+    // Return a user-friendly message instead of throwing an error.
+    console.error('Groq API key not configured. Please set the GROQ_API_KEY environment variable.');
+    return "I'm having a little trouble connecting to my knowledge base right now. Please try again in a moment.";
   }
 
   const { messages, json = false } = input;
