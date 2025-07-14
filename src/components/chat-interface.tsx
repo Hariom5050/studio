@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useSearchParams, useRouter } from 'next/navigation';
+import { conversationGuidance } from "@/ai/flows/conversation-guidance";
 
 const CONVERSATION_KEY_PREFIX = 'conversation_';
 
@@ -212,18 +213,18 @@ export function ChatInterface() {
     }
 
     try {
-      const conversationHistory = newMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+      const conversationHistoryForContext = newMessages.map(m => ({ role: m.role as 'user' | 'assistant' | 'system', content: m.content }));
       
       let responseContent = '';
       let responsePledgeIdeas: string[] | undefined;
 
       if(userMessageCount === 3 && !pledgeOffered) {
         setPledgeOffered(true);
-        const pledgeResponse = await encouragePledge({ conversationHistory: JSON.stringify(conversationHistory), webSearchEnabled: isWebSearchEnabled });
+        const pledgeResponse = await encouragePledge({ conversationHistory: JSON.stringify(conversationHistoryForContext), webSearchEnabled: isWebSearchEnabled });
         responseContent = pledgeResponse.encouragement;
         responsePledgeIdeas = pledgeResponse.pledgeIdeas;
       } else {
-        const response = await contextualAwareness({ message: userInput, conversationHistory, webSearchEnabled: isWebSearchEnabled });
+        const response = await contextualAwareness({ message: userInput, conversationHistory: conversationHistoryForContext, webSearchEnabled: isWebSearchEnabled });
         responseContent = response.response;
       }
 

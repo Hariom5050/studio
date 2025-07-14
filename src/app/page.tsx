@@ -11,8 +11,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Globe } from 'lucide-react';
 import { Suspense } from 'react';
+import { Logo } from '@/components/logo';
 
 function ChatPageContent() {
   return (
@@ -20,9 +20,9 @@ function ChatPageContent() {
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
-            <Globe className="w-8 h-8 text-primary" />
+            <Logo className="w-8 h-8" />
             <h1 className="text-xl font-bold tracking-tight font-headline text-foreground">
-              KWS Ai
+              KWS AI
             </h1>
           </div>
         </SidebarHeader>
@@ -36,7 +36,7 @@ function ChatPageContent() {
             <SidebarTrigger className="md:hidden" />
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
-                KWS Ai
+                KWS AI
               </h1>
               <p className="text-sm text-muted-foreground">Your guide to a better world.</p>
             </div>
@@ -45,8 +45,8 @@ function ChatPageContent() {
           <ChatInterface />
 
           <footer className="p-4 mt-auto text-center text-sm text-muted-foreground">
-            <p>KWS Ai may display inaccurate information. Please verify important details.</p>
-            <p>&copy; 2025 KWS Ai All Rights Reserved.</p>
+            <p>KWS AI may display inaccurate information. Please verify important details.</p>
+            <p>&copy; 2025 KWS AI All Rights Reserved.</p>
           </footer>
         </div>
       </SidebarInset>
@@ -58,8 +58,8 @@ function ChatPageFallback() {
   return (
     <div className="flex items-center justify-center h-screen bg-background">
       <div className="flex flex-col items-center gap-2">
-        <Globe className="w-12 h-12 text-primary animate-pulse" />
-        <p className="text-lg font-semibold text-muted-foreground">Loading KWS Ai...</p>
+        <Logo className="w-12 h-12 animate-pulse" />
+        <p className="text-lg font-semibold text-muted-foreground">Loading KWS AI...</p>
       </div>
     </div>
   );
