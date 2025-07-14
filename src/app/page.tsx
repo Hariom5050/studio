@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Suspense } from 'react';
-import { Logo } from '@/components/logo';
+import Logo from '@/components/logo';
 
 function ChatPageContent() {
   return (
