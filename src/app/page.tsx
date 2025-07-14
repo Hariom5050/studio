@@ -12,6 +12,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Suspense } from 'react';
+import Logo from '@/components/logo';
 
 function ChatPageContent() {
   return (
@@ -19,6 +20,7 @@ function ChatPageContent() {
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
+            <Logo />
             <h1 className="text-xl font-bold tracking-tight font-headline text-foreground">
               KWS AI
             </h1>
@@ -33,6 +35,9 @@ function ChatPageContent() {
           <header className="sticky top-0 z-10 flex items-center w-full p-4 border-b shadow-sm bg-background/90 backdrop-blur-sm">
             <SidebarTrigger className="md:hidden" />
             <div className="flex items-center flex-1 gap-2 text-center md:text-left">
+              <div className="md:hidden">
+                <Logo />
+              </div>
               <div>
                 <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
                   KWS AI
