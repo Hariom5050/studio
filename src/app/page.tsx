@@ -20,7 +20,6 @@ function ChatPageContent() {
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
-            <Logo className="w-10 h-10" />
             <h1 className="text-xl font-bold tracking-tight font-headline text-foreground">
               KWS AI
             </h1>
@@ -58,7 +57,6 @@ function ChatPageFallback() {
   return (
     <div className="flex items-center justify-center h-screen bg-background">
       <div className="flex flex-col items-center gap-2">
-        <Logo className="w-12 h-12 animate-pulse" />
         <p className="text-lg font-semibold text-muted-foreground">Loading KWS AI...</p>
       </div>
     </div>
