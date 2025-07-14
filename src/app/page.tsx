@@ -1,4 +1,3 @@
-
 "use client"
 
 import { ChatInterface } from '@/components/chat-interface';
@@ -19,26 +18,37 @@ function ChatPageContent() {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight font-headline text-foreground">
-              KWS AI
-            </h1>
-          </div>
+          {/* In Main Header */}
+<div className="flex items-center gap-3 flex-1 text-center md:text-left">
+  <img src="/logo-placeholder.png" alt="KWS AI Logo" className="h-8 w-8" /> {/* Dummy logo path */}
+  <div>
+    <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
+      KWS AI
+    </h1>
+    <p className="text-sm text-muted-foreground">
+      Your guide to a better world.
+    </p>
+  </div>
+</div>
+
         </SidebarHeader>
         <SidebarContent>
           <ChatHistory />
         </SidebarContent>
       </Sidebar>
+
       <SidebarInset>
         <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
           <header className="sticky top-0 z-10 flex items-center w-full p-4 border-b shadow-sm bg-background/90 backdrop-blur-sm">
             <SidebarTrigger className="md:hidden" />
-            <div className="flex-1 text-center md:text-left">
-              <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
-                KWS AI
-              </h1>
-              <p className="text-sm text-muted-foreground">Your guide to a better world.</p>
-            </div>
+            {/* In SidebarHeader */}
+<div className="flex items-center gap-2">
+  <img src="/logo-placeholder.png" alt="KWS AI Logo" className="h-6 w-6" /> {/* Dummy logo path */}
+  <h1 className="text-xl font-bold tracking-tight font-headline text-foreground">
+    KWS AI
+  </h1>
+</div>
+
           </header>
 
           <ChatInterface />
@@ -63,11 +73,10 @@ function ChatPageFallback() {
   );
 }
 
-
 export default function Home() {
   return (
     <Suspense fallback={<ChatPageFallback />}>
       <ChatPageContent />
     </Suspense>
-  )
+  );
 }
