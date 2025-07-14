@@ -9,8 +9,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['PT Sans', 'sans-serif'],
-        headline: ['Playfair Display', 'serif'],
+        body: ['Cabin', 'sans-serif'],
+        headline: ['Cabin', 'serif'],
         code: ['monospace'],
       },
       colors: {
