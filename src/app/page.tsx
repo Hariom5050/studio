@@ -20,6 +20,7 @@ function ChatPageContent() {
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
+            <Logo />
             <h1 className="text-xl font-bold tracking-tight font-headline text-foreground">
               KWS AI
             </h1>
@@ -33,11 +34,14 @@ function ChatPageContent() {
         <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
           <header className="sticky top-0 z-10 flex items-center w-full p-4 border-b shadow-sm bg-background/90 backdrop-blur-sm">
             <SidebarTrigger className="md:hidden" />
-            <div className="flex-1 text-center md:text-left">
-              <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
-                KWS AI
-              </h1>
-              <p className="text-sm text-muted-foreground">Your guide to a better world.</p>
+            <div className="flex items-center flex-1 gap-2 text-center md:text-left">
+               <Logo className="h-10 md:hidden" />
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
+                  KWS AI
+                </h1>
+                <p className="text-sm text-muted-foreground">Your guide to a better world.</p>
+              </div>
             </div>
           </header>
 
@@ -57,6 +61,7 @@ function ChatPageFallback() {
   return (
     <div className="flex items-center justify-center h-screen bg-background">
       <div className="flex flex-col items-center gap-2">
+        <Logo className="h-12" />
         <p className="text-lg font-semibold text-muted-foreground">Loading KWS AI...</p>
       </div>
     </div>
