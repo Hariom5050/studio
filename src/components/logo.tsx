@@ -23,34 +23,7 @@ export function Logo({ className }: { className?: string }) {
           d="M100 10L20 45V130C20 175 55 215 100 220V10Z"
           fill="#FFFFFF"
         />
-        <path
-          d="M100 10L180 45V130C180 175 145 215 100 220V10Z"
-          fill="#D4B23D"
-        />
-        <path
-          d="M100 10L20 45V130C20 175 55 215 100 220V10Z"
-          fill="#FFFFFF"
-        />
-        <path
-          d="M100 10L180 45V130C180 175 145 215 100 220V10Z"
-          fill="#D4B23D"
-        />
-        <path
-          d="M100 10L20 45V130C20 175 55 215 100 220V10Z"
-          fill="white"
-        />
-        <path
-          d="M100 10L180 45V130C180 175 145 215 100 220V10Z"
-          fill="#D4B23D"
-        />
-        <path
-          d="M100 10L20 45V130C20 175 55 215 100 220V10Z"
-          fill="white"
-        />
-        <path
-          d="M100 10L180 45V130C180 175 145 215 100 220V10Z"
-          fill="#D4B23D"
-        />
+        
         <path
           d="M95 15H105V220H95V15Z"
           fill="#0C0C0C"
