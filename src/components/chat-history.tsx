@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, X } from 'lucide-react';
+import { History, PlusCircle, Trash2, X } from 'lucide-react';
 import type { Conversation } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
@@ -181,6 +181,14 @@ export function ChatHistory() {
         )}
         </div>
        )}
+      
+      <div className="flex items-center gap-2 px-2 mb-2">
+        <History className="w-5 h-5 text-muted-foreground" />
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          History
+        </h2>
+      </div>
+
 
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-2 pr-2">
