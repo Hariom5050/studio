@@ -12,6 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { fallbackGenerate } from '@/ai/fallback';
 import { webSearch } from '@/ai/tools/web-search';
+import type { Message } from '@/lib/types';
 
 const LocalizedSustainabilityTipInputSchema = z.object({
   location: z
@@ -21,6 +22,7 @@ const LocalizedSustainabilityTipInputSchema = z.object({
     .boolean()
     .optional()
     .describe('Whether to enable web search for the AI.'),
+   conversationHistory: z.array(z.any()).optional().describe("The history of the conversation.")
 });
 export type LocalizedSustainabilityTipInput = z.infer<
   typeof LocalizedSustainabilityTipInputSchema
@@ -46,6 +48,13 @@ export async function getLocalizedSustainabilityTip(
 const systemPrompt = `You are an AI assistant specialized in providing localized sustainability tips. You are acting as a local guide. Use the webSearch tool to find relevant and current information if needed.`;
 const promptTemplate = `Based on the user's location (latitude and longitude), provide a specific, actionable, and locally relevant sustainability tip. For example, mention a local park, a specific city recycling program, or a regional environmental issue.
 
+{{#if conversationHistory}}
+Conversation History:
+{{#each conversationHistory}}
+    {{this.role}}: {{this.content}}
+{{/each}}
+{{/if}}
+
 User Location: {{{location}}}`;
 
 const prompt = ai.definePrompt({
@@ -68,7 +77,7 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
         const {output} = await prompt(input, {
             tools: useWebSearch ? [webSearch] : [],
         });
-        if (!output) {
+        if (!output || !output.tip) {
             throw new Error("Primary model returned no output for localized tip.");
         }
         return output;

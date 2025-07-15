@@ -82,7 +82,7 @@ export function ChatInterface() {
             const { latitude, longitude } = position.coords;
             const location = `lat: ${latitude}, lon: ${longitude}`;
             try {
-                const tip = await getLocalizedSustainabilityTip({ location, webSearchEnabled: isWebSearchEnabled });
+                const tip = await getLocalizedSustainabilityTip({ location, webSearchEnabled: isWebSearchEnabled, conversationHistory: initialMessages });
                 setMessages(prev => {
                     const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: tip.tip }];
                     saveConversation(newConvoId, updated, []);
