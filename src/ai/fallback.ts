@@ -12,6 +12,12 @@ interface FallbackGenerateInput {
   json?: boolean;
 }
 
+interface OpenRouterModel {
+    name: string;
+    apiKey: string | undefined;
+    model: string;
+}
+
 /**
  * A generic function to try a fallback API endpoint.
  * @param serviceName - The name of the service for logging.
@@ -117,34 +123,54 @@ async function tryMistral(input: FallbackGenerateInput): Promise<string | null> 
     });
 }
 
-// Placeholder for DeepSeek API
-async function tryDeepSeek(input: FallbackGenerateInput): Promise<string | null> {
-    const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
-    if (!deepseekApiKey) return null;
+async function tryOpenRouterAPI(modelConfig: OpenRouterModel, input: FallbackGenerateInput): Promise<string | null> {
+  const { apiKey, model, name } = modelConfig;
+  const { messages, json = false } = input;
 
-    console.log("DeepSeek integration is not yet fully implemented. Add API endpoint and body structure.");
-    // Example usage of tryFallbackAPI:
-    // return tryFallbackAPI('DeepSeek', 'https://api.deepseek.com/v1/chat/completions', deepseekApiKey, {
-    //     model: "deepseek-chat",
-    //     messages: input.messages,
-    //     // ... other params
-    // });
+  if (!apiKey) {
+    console.log(`${name} API key not configured. Skipping.`);
     return null;
+  }
+  
+  return tryFallbackAPI(
+    name,
+    'https://openrouter.ai/api/v1/chat/completions',
+    apiKey,
+    {
+      model,
+      messages: messages,
+      response_format: json ? { type: 'json_object' } : undefined,
+    }
+  );
 }
 
-export async function fallbackGenerate(input: FallbackGenerateInput): Promise<string> {
-  const fallbacks = [
-    tryGroq,
-    tryMistral,
-    tryDeepSeek,
-  ];
 
-  for (const fallback of fallbacks) {
-    const response = await fallback(input);
-    if (response) {
-      return response;
+export async function fallbackGenerate(input: FallbackGenerateInput): Promise<string> {
+    const primaryFallbacks = [
+        tryGroq,
+        tryMistral,
+    ];
+
+    for (const fallback of primaryFallbacks) {
+        const response = await fallback(input);
+        if (response) {
+            return response;
+        }
     }
-  }
+
+    const openRouterFallbacks: OpenRouterModel[] = [
+        { name: 'Deepseek', apiKey: process.env.DEEPSEEK_API_KEY, model: 'deepseek/deepseek-chat' },
+        { name: 'Kimi', apiKey: process.env.KIMI_API_KEY, model: 'kimi/kimi-dev-72b' },
+        { name: 'Moonshot', apiKey: process.env.MOONSHOT_API_KEY, model: 'moonshot/moonshot-v1-32k' },
+        { name: 'Sarvam', apiKey: process.env.SARVAM_API_KEY, model: 'sarvam/sarvam-m' },
+    ];
+
+    for (const modelConfig of openRouterFallbacks) {
+        const response = await tryOpenRouterAPI(modelConfig, input);
+        if (response) {
+            return response;
+        }
+    }
   
   throw new Error('All fallback services failed.');
 }
