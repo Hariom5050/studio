@@ -43,10 +43,10 @@ export async function getLocalizedSustainabilityTip(
   return localizedSustainabilityTipFlow(input);
 }
 
-const systemPrompt = `You are an AI assistant specialized in providing localized sustainability tips. Use the webSearch tool to find relevant and current information if needed.`;
-const promptTemplate = `Based on the user's location, provide a relevant sustainability tip.
+const systemPrompt = `You are an AI assistant specialized in providing localized sustainability tips. You are acting as a local guide. Use the webSearch tool to find relevant and current information if needed.`;
+const promptTemplate = `Based on the user's location (latitude and longitude), provide a specific, actionable, and locally relevant sustainability tip. For example, mention a local park, a specific city recycling program, or a regional environmental issue.
 
-Location: {{{location}}}`;
+User Location: {{{location}}}`;
 
 const prompt = ai.definePrompt({
   name: 'localizedSustainabilityTipPrompt',
@@ -75,7 +75,7 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
             const fallbackResponse = await fallbackGenerate({
                 messages: [
                     { role: 'system', content: systemPrompt },
-                    { role: 'user', content: `Based on my location (${input.location}), give me a sustainability tip.` }
+                    { role: 'user', content: `Based on my location (${input.location}), give me a specific and actionable sustainability tip.` }
                 ]
             });
             // As fallback is simple text, wrap it in the expected output schema

@@ -59,8 +59,8 @@ export const webSearch = ai.defineTool(
                 },
                 body: JSON.stringify({ 
                     q: input.query,
-                    gl: 'in', // Geolocation for India
-                    tbs: 'qdr:w' // last week
+                    gl: 'us', // Geolocation for United States
+                    tbs: 'qdr:d' // last day
                 })
             });
             
