@@ -70,7 +70,7 @@ export function ChatInterface() {
     const greeting = "Hi! I'm KWS AI – your guide to a better world 🌍";
     const initialMessages: Message[] = [
         { id: crypto.randomUUID(), role: 'assistant', content: greeting },
-        { id: crypto.randomUUID(), role: 'assistant', content: 'For a better experience, please allow location permissions when prompted.'}
+        { id: crypto.randomUUID(), role: 'assistant', content: 'To optimize your experience, kindly enable location services when prompted.'}
     ];
     setMessages(initialMessages);
     setPledges([]);
@@ -300,3 +300,5 @@ export function ChatInterface() {
     </div>
   );
 }
+
+    
