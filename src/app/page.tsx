@@ -49,6 +49,7 @@ function ChatPageContent() {
           <footer className="p-4 mt-auto text-center text-sm text-muted-foreground">
             <p>KWS AI may display inaccurate information. Please verify important details.</p>
             <p>&copy; 2025 Kingswood World School. All Rights Reserved.</p>
+            <p>This whole project is designed and created by students of Kingswood World School - 1) Hariom Singh and 2) Akshit khare of 11th class.</p>
           </footer>
         </div>
       </SidebarInset>
