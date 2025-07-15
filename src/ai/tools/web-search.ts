@@ -34,7 +34,7 @@ export const webSearch = ai.defineTool(
   async (input) => {
     const apiKeys = (process.env.SERPER_API_KEYS || '').split(',').map(k => k.trim()).filter(Boolean);
 
-    if (!apiKeys || apiKeys.length === 0) {
+    if (apiKeys.length === 0) {
       console.error('Serper API key(s) are not configured.');
       return {
         results: [
@@ -59,6 +59,7 @@ export const webSearch = ai.defineTool(
         const url = 'https://google.serper.dev/search';
         let lastError: any = null;
 
+        // Try each API key until one succeeds for this specific query
         for (let i = 0; i < apiKeys.length; i++) {
           const apiKey = getApiKey();
           try {
@@ -71,17 +72,19 @@ export const webSearch = ai.defineTool(
               body: JSON.stringify({ q: query, gl, num }),
             });
 
-            if (response.status === 401 || response.status === 403 || response.status === 429) {
+            // If key is invalid or rate-limited, try the next one
+            if ([401, 403, 429].includes(response.status)) {
               console.warn(`Serper API key ending in ...${apiKey.slice(-4)} failed with status ${response.status}. Trying next key.`);
               lastError = await response.json();
-              continue; // Try the next key
+              continue; 
             }
 
             if (!response.ok) {
               const errorData = await response.json();
               console.error(`Serper API Error for query "${query}"`, errorData);
               lastError = errorData;
-              continue; // Try the next key
+              // Don't continue to next key for general errors, fail fast for this query
+              throw new Error(`Serper API request failed: ${errorData.message}`);
             }
 
             const data = await response.json();
@@ -98,12 +101,15 @@ export const webSearch = ai.defineTool(
             }));
 
           } catch (error) {
+            // Log non-key-related errors and stop trying for this query
             console.error(`Error during web search for query "${query}" with a key:`, error);
             lastError = error;
-            continue; // Try the next key
+            // Re-throw to prevent falling through to the "all keys failed" message
+            throw error;
           }
         }
-        // If all keys failed for this query
+        
+        // This part is reached only if all keys failed with 401/403/429
         console.error(`All Serper API keys failed for query: "${query}". Last error:`, lastError);
         return [];
     }
@@ -132,7 +138,7 @@ export const webSearch = ai.defineTool(
               };
         }
         
-        // Remove duplicates based on the link
+        // Remove duplicates based on the link and return the unique results
         const uniqueResults = Array.from(new Map(combinedResults.map(item => [item.link, item])).values());
         
         return { results: uniqueResults };

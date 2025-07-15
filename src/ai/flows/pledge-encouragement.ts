@@ -34,7 +34,7 @@ export async function encouragePledge(input: EncouragePledgeInput): Promise<Enco
   return encouragePledgeFlow(input);
 }
 
-const systemPrompt = `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world. Use the webSearch tool to find creative and relevant ideas if needed.`;
+const systemPrompt = `You are KWS Ai, a helpful AI assistant designed to encourage users to make small pledges to improve the world. Use the webSearch tool to find creative and relevant ideas if needed. Your ideas should be specific, actionable, and inspiring.`;
 const promptTemplate = `Based on the conversation history, suggest a few pledge ideas and provide an encouraging message.
 
 Conversation History: {{{conversationHistory}}}`;
@@ -55,10 +55,14 @@ const encouragePledgeFlow = ai.defineFlow(
   },
   async input => {
     try {
+        const useWebSearch = input.webSearchEnabled && !!process.env.SERPER_API_KEYS;
         const {output} = await prompt(input, {
-            tools: input.webSearchEnabled ? [webSearch] : [],
+            tools: useWebSearch ? [webSearch] : [],
         });
-        return output!;
+        if (!output) {
+            throw new Error("Primary model returned no output for pledge encouragement.");
+        }
+        return output;
     } catch (error) {
         console.error("Primary model failed in encouragePledgeFlow, trying fallback:", error);
         try {

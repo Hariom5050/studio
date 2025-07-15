@@ -68,7 +68,10 @@ const localizedSustainabilityTipFlow = ai.defineFlow(
         const {output} = await prompt(input, {
             tools: useWebSearch ? [webSearch] : [],
         });
-        return output!;
+        if (!output) {
+            throw new Error("Primary model returned no output for localized tip.");
+        }
+        return output;
     } catch(error) {
         console.error("Primary model failed in localizedSustainabilityTipFlow, trying fallback:", error);
         try {
