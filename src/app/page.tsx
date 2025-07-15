@@ -48,7 +48,7 @@ function ChatPageContent() {
 
           <footer className="p-4 mt-auto text-center text-sm text-muted-foreground">
             <p>KWS AI may display inaccurate information. Please verify important details.</p>
-            <p>This KWS AI is created and designed and created by Hariom Singh and Akshit Khare</p>
+            <p>The KWS AI is created and designed and created by Hariom Singh and Akshit Khare</p>
           </footer>
         </div>
       </SidebarInset>
