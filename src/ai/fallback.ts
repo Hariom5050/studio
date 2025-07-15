@@ -132,27 +132,11 @@ async function tryDeepSeek(input: FallbackGenerateInput): Promise<string | null>
     return null;
 }
 
-// Placeholder for a generic "Open Model" API
-async function tryOpenModel(input: FallbackGenerateInput): Promise<string | null> {
-    const openModelApiKey = process.env.OPENMODEL_API_KEY;
-    if (!openModelApiKey) return null;
-    
-    console.log("Open Model integration is not yet fully implemented. Add API endpoint and body structure.");
-    // Example usage of tryFallbackAPI:
-    // return tryFallbackAPI('OpenModel', 'https://api.openmodel.com/v1/chat/completions', openModelApiKey, {
-    //     model: "some-open-model",
-    //     messages: input.messages,
-    //     // ... other params
-    // });
-    return null;
-}
-
 export async function fallbackGenerate(input: FallbackGenerateInput): Promise<string> {
   const fallbacks = [
     tryGroq,
     tryMistral,
     tryDeepSeek,
-    tryOpenModel,
   ];
 
   for (const fallback of fallbacks) {
