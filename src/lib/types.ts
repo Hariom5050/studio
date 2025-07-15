@@ -3,6 +3,7 @@ export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   pledgeIdeas?: string[];
+  isLoading?: boolean;
 }
 
 export interface Conversation {

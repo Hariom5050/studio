@@ -2,8 +2,8 @@
 
 import type { Message } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bot, User, Leaf, Bird, ShieldCheck, Globe2, HeartHandshake } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Bot, User, Leaf, Bird, ShieldCheck, Globe2, HeartHandshake, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ChatMessageProps {
@@ -46,7 +46,15 @@ export function ChatMessage({ message, onPledgeSelect }: ChatMessageProps) {
             : "bg-secondary rounded-tr-none text-secondary-foreground"
         )}
       >
-        <p className="leading-relaxed whitespace-pre-wrap font-body">{message.content}</p>
+        {message.isLoading ? (
+          <div className="flex items-center gap-2">
+            <LoaderCircle className="w-4 h-4 animate-spin text-primary" />
+            <p className="leading-relaxed whitespace-pre-wrap font-body text-muted-foreground">{message.content}</p>
+          </div>
+        ) : (
+          <p className="leading-relaxed whitespace-pre-wrap font-body">{message.content}</p>
+        )}
+        
         {message.pledgeIdeas && message.pledgeIdeas.length > 0 && (
           <div className="mt-4 space-y-2">
             {message.pledgeIdeas.map((idea, index) => (

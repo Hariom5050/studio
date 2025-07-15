@@ -144,7 +144,7 @@ export function ChatInterface() {
 
   useEffect(() => {
     if (viewportRef.current) {
-      viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+      viewportRef.current.scrollHeight = viewportRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -201,7 +201,13 @@ export function ChatInterface() {
     setIsLoading(true);
 
     const tempUserMessage: Message = { id: crypto.randomUUID(), role: 'user', content: userInput };
-    const newMessages = [...messages, tempUserMessage];
+    const loadingAssistantMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: "Thank you for your patience! Your response is being generated.",
+      isLoading: true,
+    };
+    const newMessages = [...messages, tempUserMessage, loadingAssistantMessage];
     setMessages(newMessages);
 
     saveConversation(currentConversationId, newMessages, pledges);
@@ -213,7 +219,9 @@ export function ChatInterface() {
     }
 
     try {
-      const conversationHistoryForContext = newMessages.map(m => ({ role: m.role as 'user' | 'assistant' | 'system', content: m.content }));
+      const conversationHistoryForContext = newMessages
+        .filter(m => !m.isLoading) // Exclude our placeholder from history
+        .map(m => ({ role: m.role as 'user' | 'assistant' | 'system', content: m.content }));
       
       let responseContent = '';
       let responsePledgeIdeas: string[] | undefined;
@@ -227,18 +235,29 @@ export function ChatInterface() {
         const response = await contextualAwareness({ message: userInput, conversationHistory: conversationHistoryForContext, webSearchEnabled: isWebSearchEnabled });
         responseContent = response.response;
       }
-
-      const assistantMessage: Message = { id: crypto.randomUUID(), role: 'assistant', content: responseContent, pledgeIdeas: responsePledgeIdeas };
-      const finalMessages = [...newMessages, assistantMessage];
-      setMessages(finalMessages);
-      saveConversation(currentConversationId, finalMessages, pledges);
+      
+      setMessages(prevMessages => {
+        const finalMessages = prevMessages.map(msg => 
+          msg.id === loadingAssistantMessage.id 
+            ? { ...msg, content: responseContent, pledgeIdeas: responsePledgeIdeas, isLoading: false }
+            : msg
+        );
+        saveConversation(currentConversationId, finalMessages, pledges);
+        return finalMessages;
+      });
 
     } catch (error) {
       console.error("Error with AI flow:", error);
-      const errorMessage: Message = { id: crypto.randomUUID(), role: 'assistant', content: "I'm having a little trouble connecting to my knowledge base right now. This could be due to a missing or invalid API key. Please check your configuration and try again." };
-      const finalMessages = [...newMessages, errorMessage];
-      setMessages(finalMessages);
-      saveConversation(currentConversationId, finalMessages, pledges);
+      const errorMessageContent = "I'm having a little trouble connecting to my knowledge base right now. This could be due to a missing or invalid API key. Please check your configuration and try again.";
+      setMessages(prevMessages => {
+        const finalMessages = prevMessages.map(msg => 
+          msg.id === loadingAssistantMessage.id 
+            ? { ...msg, content: errorMessageContent, isLoading: false }
+            : msg
+        );
+        saveConversation(currentConversationId, finalMessages, pledges);
+        return finalMessages;
+      });
     } finally {
       setIsLoading(false);
     }
@@ -251,7 +270,7 @@ export function ChatInterface() {
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} onPledgeSelect={handlePledgeSelect} />
           ))}
-          {isLoading && (
+          {isLoading && !messages.some(m => m.isLoading) && (
             <div className="flex justify-start">
               <LoaderCircle className="w-6 h-6 animate-spin text-primary" />
             </div>
@@ -300,5 +319,3 @@ export function ChatInterface() {
     </div>
   );
 }
-
-    
