@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A centralized fallback function to call various LLM APIs.
- * It prioritizes services in the order: Groq, Mistral, then other configured fallbacks.
+ * It prioritizes services in the order: Groq, OpenRouter models, then Mistral.
  */
 import Groq from 'groq-sdk';
 
@@ -146,18 +146,13 @@ async function tryOpenRouterAPI(modelConfig: OpenRouterModel, input: FallbackGen
 
 
 export async function fallbackGenerate(input: FallbackGenerateInput): Promise<string> {
-    const primaryFallbacks = [
-        tryGroq,
-        tryMistral,
-    ];
-
-    for (const fallback of primaryFallbacks) {
-        const response = await fallback(input);
-        if (response) {
-            return response;
-        }
+    // 1. Try Groq
+    const groqResponse = await tryGroq(input);
+    if (groqResponse) {
+        return groqResponse;
     }
 
+    // 2. Try OpenRouter models
     const openRouterFallbacks: OpenRouterModel[] = [
         { name: 'Deepseek', apiKey: process.env.DEEPSEEK_API_KEY, model: 'deepseek/deepseek-chat' },
         { name: 'Kimi', apiKey: process.env.KIMI_API_KEY, model: 'kimi/kimi-dev-72b' },
@@ -170,6 +165,12 @@ export async function fallbackGenerate(input: FallbackGenerateInput): Promise<st
         if (response) {
             return response;
         }
+    }
+
+    // 3. Try Mistral
+    const mistralResponse = await tryMistral(input);
+    if (mistralResponse) {
+        return mistralResponse;
     }
   
   throw new Error('All fallback services failed.');
