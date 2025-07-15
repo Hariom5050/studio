@@ -1,4 +1,3 @@
-
 "use client"
 
 import { ChatInterface } from '@/components/chat-interface';
@@ -27,6 +26,7 @@ function ChatPageContent() {
           <ChatHistory />
         </SidebarContent>
       </Sidebar>
+
       <SidebarInset>
         <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
           <header className="sticky top-0 z-10 flex items-center w-full p-4 border-b shadow-sm bg-background/90 backdrop-blur-sm">
@@ -66,11 +66,10 @@ function ChatPageFallback() {
   );
 }
 
-
 export default function Home() {
   return (
     <Suspense fallback={<ChatPageFallback />}>
       <ChatPageContent />
     </Suspense>
-  )
+  );
 }
