@@ -4,7 +4,7 @@ import Image from 'next/image';
 const Logo = () => {
   return (
     <Image
-      src="https://i.ibb.co/PggY7m2/Whats-App-Image-2024-07-29-at-12-36-12-AM.jpg"
+      src="https://res.cloudinary.com/dtjjgiitl/image/upload/q_auto:good,f_auto,fl_progressive/v1752558405/scyjghobvnawzyuhfzho.jpg"
       alt="Kingswood World School Logo"
       width={40}
       height={40}
