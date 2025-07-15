@@ -19,7 +19,7 @@ function ChatPageContent() {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 p-2">
             <Logo />
           </div>
         </SidebarHeader>
