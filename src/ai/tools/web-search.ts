@@ -46,8 +46,13 @@ export const webSearch = ai.defineTool(
       };
     }
 
-    const url = `https://google.serper.dev/search`;
+    const url = `https://google.serper.dev/news`;
     let lastError: any = null;
+
+    const requestBody = JSON.stringify({
+        "q": input.query,
+        "gl": "us",
+    });
 
     for (const apiKey of apiKeys) {
         try {
@@ -57,11 +62,7 @@ export const webSearch = ai.defineTool(
                     'X-API-KEY': apiKey,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ 
-                    q: input.query,
-                    gl: 'us', // Geolocation for United States
-                    tbs: 'qdr:d' // last day
-                })
+                body: requestBody
             });
             
             if (response.status === 401 || response.status === 403 || response.status === 429) {
@@ -79,20 +80,19 @@ export const webSearch = ai.defineTool(
 
             const data = await response.json();
             
-            // This is the corrected logic. Serper API returns a different body when no results are found.
-            if (!data.organic || data.organic.length === 0) {
+            if (!data.news || data.news.length === 0) {
                 return {
                     results: [{
                         title: "No results found",
                         link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
-                        snippet: `Your search - ${input.query} - did not match any documents. Please try a different query.`,
+                        snippet: `Your search - ${input.query} - did not match any news documents. Please try a different query.`,
                         position: 1,
                     }]
                 }
             }
             
-            // The search endpoint returns `organic` array
-            const results = (data.organic || []).map((item: any) => ({
+            // The news endpoint returns `news` array
+            const results = (data.news || []).map((item: any) => ({
                 title: item.title,
                 link: item.link,
                 snippet: item.snippet,
