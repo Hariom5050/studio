@@ -144,7 +144,7 @@ export function ChatInterface() {
 
   useEffect(() => {
     if (viewportRef.current) {
-      viewportRef.current.scrollHeight = viewportRef.current.scrollHeight;
+      viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
     }
   }, [messages]);
 
