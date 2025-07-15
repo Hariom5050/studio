@@ -21,9 +21,6 @@ function ChatPageContent() {
         <SidebarHeader>
           <div className="flex items-center gap-2">
             <Logo />
-            <h1 className="text-xl font-bold tracking-tight font-headline text-foreground">
-              KWS AI
-            </h1>
           </div>
         </SidebarHeader>
         <SidebarContent>
