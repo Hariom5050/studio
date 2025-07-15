@@ -1,7 +1,8 @@
 
 'use server';
 /**
- * @fileOverview A centralized fallback function to call the Groq API.
+ * @fileOverview A centralized fallback function to call various LLM APIs.
+ * It now prioritizes Mistral AI and then falls back to Groq.
  */
 import Groq from 'groq-sdk';
 import type { Message } from '@/lib/types';
@@ -23,95 +24,108 @@ if (process.env.GROQ_API_KEY) {
     }
 }
 
-
-export async function fallbackGenerate(input: FallbackGenerateInput): Promise<string> {
-  if (!groq) {
-    // Return a user-friendly message instead of throwing an error.
-    console.error('Groq API key not configured. Please set the GROQ_API_KEY environment variable.');
-    return "I'm having a little trouble connecting to my knowledge base right now. Please try again in a moment.";
-  }
-
-  const { messages, json = false } = input;
-  const primaryFallbackModel = 'gemma2-9b-it';
-  const secondaryFallbackModel = 'llama3-70b-8192';
-  const tertiaryFallbackModel = 'mixtral-8x7b-32768';
-  
-  // The Groq API requires at least one message.
-  if (!messages || messages.length === 0) {
-      throw new Error("Cannot call Groq API with no messages.");
-  }
-
-  try {
-    // First attempt with the primary fallback model
-    const chatCompletion = await groq.chat.completions.create({
-      messages: messages.map(({role, content}) => ({role, content})),
-      model: primaryFallbackModel,
-      temperature: 0.7,
-      max_tokens: 1024,
-      top_p: 1,
-      stream: false,
-      response_format: json ? { type: 'json_object' } : undefined,
-    });
-    
-    const content = chatCompletion.choices[0]?.message?.content;
-
-    if (!content) {
-      throw new Error("Groq API returned an empty response.");
+async function tryMistral(input: FallbackGenerateInput): Promise<string | null> {
+    const mistralApiKey = process.env.MISTRAL_API_KEY;
+    if (!mistralApiKey) {
+        console.log("Mistral API key not configured. Skipping Mistral fallback.");
+        return null;
     }
 
-    return content;
-  } catch (error) {
-    console.error(`Error calling Groq API with ${primaryFallbackModel}:`, error);
-    console.log(`Primary fallback failed. Trying secondary fallback model: ${secondaryFallbackModel}`);
+    const { messages, json = false } = input;
+    const mistralModel = "mistral-large-latest"; 
     
-    // Second attempt with the secondary fallback model
     try {
-        const secondaryChatCompletion = await groq.chat.completions.create({
-            messages: messages.map(({role, content}) => ({role, content})),
-            model: secondaryFallbackModel,
-            temperature: 0.7,
-            max_tokens: 1024,
-            top_p: 1,
-            stream: false,
-            response_format: json ? { type: 'json_object' } : undefined,
+        console.log(`Attempting fallback with Mistral model: ${mistralModel}`);
+        const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${mistralApiKey}`,
+            },
+            body: JSON.stringify({
+                model: mistralModel,
+                messages: messages,
+                response_format: json ? { type: 'json_object' } : undefined,
+            }),
         });
 
-        const secondaryContent = secondaryChatCompletion.choices[0]?.message?.content;
-
-        if (!secondaryContent) {
-            throw new Error("Groq API (secondary fallback) returned an empty response.");
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`Mistral API request failed with status ${response.status}: ${errorBody}`);
         }
 
-        return secondaryContent;
+        const data = await response.json();
+        const content = data.choices[0]?.message?.content;
 
-    } catch (secondaryError) {
-        console.error(`Error calling Groq API with ${secondaryFallbackModel}:`, secondaryError);
-        console.log(`Secondary fallback failed. Trying tertiary fallback model: ${tertiaryFallbackModel}`);
+        if (!content) {
+            throw new Error("Mistral API returned an empty response.");
+        }
 
-        // Third attempt with the tertiary fallback model
+        console.log("Successfully received response from Mistral.");
+        return content;
+    } catch (error) {
+        console.error(`Error calling Mistral API:`, error);
+        return null;
+    }
+}
+
+
+async function tryGroq(input: FallbackGenerateInput): Promise<string | null> {
+    if (!groq) {
+        console.log("Groq API key not configured. Skipping Groq fallback.");
+        return null;
+    }
+    
+    const { messages, json = false } = input;
+    const primaryFallbackModel = 'gemma2-9b-it';
+    const secondaryFallbackModel = 'llama3-70b-8192';
+    const tertiaryFallbackModel = 'mixtral-8x7b-32768';
+    const modelsToTry = [primaryFallbackModel, secondaryFallbackModel, tertiaryFallbackModel];
+
+    if (!messages || messages.length === 0) {
+      console.error("Cannot call Groq API with no messages.");
+      return null;
+    }
+
+    for (const model of modelsToTry) {
         try {
-            const tertiaryChatCompletion = await groq.chat.completions.create({
+            console.log(`Attempting fallback with Groq model: ${model}`);
+            const chatCompletion = await groq.chat.completions.create({
                 messages: messages.map(({role, content}) => ({role, content})),
-                model: tertiaryFallbackModel,
-                temperature: 0.6,
-                max_tokens: 4096,
-                top_p: 0.95,
+                model: model,
+                temperature: 0.7,
+                max_tokens: 1024,
+                top_p: 1,
                 stream: false,
                 response_format: json ? { type: 'json_object' } : undefined,
             });
-
-            const tertiaryContent = tertiaryChatCompletion.choices[0]?.message?.content;
-
-            if (!tertiaryContent) {
-                throw new Error("Groq API (tertiary fallback) returned an empty response.");
+            
+            const content = chatCompletion.choices[0]?.message?.content;
+            if (content) {
+                console.log(`Successfully received response from Groq model: ${model}`);
+                return content;
             }
-
-            return tertiaryContent;
-
-        } catch (tertiaryError) {
-             console.error(`Error calling Groq API with ${tertiaryFallbackModel}:`, tertiaryError);
-             throw new Error('The fallback service (Groq) also failed on the third attempt.');
+        } catch (error) {
+            console.error(`Error calling Groq API with ${model}:`, error);
         }
     }
+    
+    console.log("All Groq fallback models failed.");
+    return null;
+}
+
+
+export async function fallbackGenerate(input: FallbackGenerateInput): Promise<string> {
+  const mistralResponse = await tryMistral(input);
+  if (mistralResponse) {
+    return mistralResponse;
   }
+
+  const groqResponse = await tryGroq(input);
+  if (groqResponse) {
+    return groqResponse;
+  }
+  
+  // If all fallbacks fail
+  throw new Error('All fallback services (Mistral, Groq) failed.');
 }
