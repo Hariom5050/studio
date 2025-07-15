@@ -48,113 +48,102 @@ export const webSearch = ai.defineTool(
       };
     }
     
-    let apiKeyIndex = 0;
-    const getApiKey = () => {
-        const key = apiKeys[apiKeyIndex];
-        apiKeyIndex = (apiKeyIndex + 1) % apiKeys.length;
-        return key;
-    }
-
-    const performSearch = async (query: string, gl: 'in' | 'us', num: number): Promise<SearchResult[]> => {
+    // This helper will try one key at a time.
+    const performSearchWithKey = async (query: string, gl: 'in' | 'us', num: number, apiKey: string): Promise<SearchResult[]> => {
         const url = 'https://google.serper.dev/search';
-        let lastError: any = null;
-
-        // Try each API key until one succeeds for this specific query
-        for (let i = 0; i < apiKeys.length; i++) {
-          const apiKey = getApiKey();
-          try {
-            const response = await fetch(url, {
-              method: 'POST',
-              headers: {
-                'X-API-KEY': apiKey,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ q: query, gl, num }),
-            });
-
-            // If key is invalid or rate-limited, try the next one
-            if ([401, 403, 429].includes(response.status)) {
-              console.warn(`Serper API key ending in ...${apiKey.slice(-4)} failed with status ${response.status}. Trying next key.`);
-              lastError = await response.json();
-              continue; 
-            }
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              console.error(`Serper API Error for query "${query}"`, errorData);
-              lastError = errorData;
-              // Don't continue to next key for general errors, fail fast for this query
-              throw new Error(`Serper API request failed: ${errorData.message}`);
-            }
-
-            const data = await response.json();
-            
-            if (!data.organic || data.organic.length === 0) {
-               return []; // No results for this specific query
-            }
-            
-            return (data.organic || []).map((item: any) => ({
-              title: item.title,
-              link: item.link,
-              snippet: item.snippet,
-              position: item.position,
-            }));
-
-          } catch (error) {
-            // Log non-key-related errors and stop trying for this query
-            console.error(`Error during web search for query "${query}" with a key:`, error);
-            lastError = error;
-            // Re-throw to prevent falling through to the "all keys failed" message
-            throw error;
-          }
-        }
         
-        // This part is reached only if all keys failed with 401/403/429
-        console.error(`All Serper API keys failed for query: "${query}". Last error:`, lastError);
-        return [];
-    }
-
-    try {
-        const indianNewsQuery = `${input.query} news`;
-        const globalTrendsQuery = `${input.query} latest trends and technology`;
-
-        const [indianResults, globalResults] = await Promise.all([
-            performSearch(indianNewsQuery, 'in', 20),
-            performSearch(globalTrendsQuery, 'us', 10)
-        ]);
-
-        const combinedResults = [...indianResults, ...globalResults];
-
-        if (combinedResults.length === 0) {
-             return {
-                results: [
-                  {
-                    title: 'No results found',
-                    link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
-                    snippet: `Your search - ${input.query} - did not match any documents. Please try a different query.`,
-                    position: 1,
-                  },
-                ],
-              };
-        }
-        
-        // Remove duplicates based on the link and return the unique results
-        const uniqueResults = Array.from(new Map(combinedResults.map(item => [item.link, item])).values());
-        
-        return { results: uniqueResults };
-
-    } catch (error) {
-        console.error('An unexpected error occurred in the webSearch tool:', error);
-        return {
-          results: [
-            {
-              title: 'Search Failed',
-              link: '#',
-              snippet: 'The web search failed due to an unexpected error. Please check the server logs.',
-              position: 1,
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+            'X-API-KEY': apiKey,
+            'Content-Type': 'application/json',
             },
-          ],
-        };
+            body: JSON.stringify({ q: query, gl, num }),
+        });
+
+        // If key is invalid or rate-limited, throw an error to trigger fallback to the next key.
+        if ([401, 403, 429].includes(response.status)) {
+            const errorBody = await response.json();
+            console.warn(`Serper API key ending in ...${apiKey.slice(-4)} failed with status ${response.status}. Trying next key.`);
+            // Throw a specific error to be caught by the outer loop
+            const err = new Error(`Serper API Error: ${response.status}`);
+            (err as any).status = response.status;
+            (err as any).data = errorBody;
+            throw err;
+        }
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error(`Serper API Error for query "${query}"`, errorData);
+            // Don't continue to next key for general errors, fail fast.
+            throw new Error(`Serper API request failed: ${errorData.message || 'Unknown error'}`);
+        }
+
+        const data = await response.json();
+        
+        return (data.organic || []).map((item: any) => ({
+            title: item.title,
+            link: item.link,
+            snippet: item.snippet,
+            position: item.position,
+        }));
     }
+
+    const indianNewsQuery = `${input.query} news`;
+    const globalTrendsQuery = `${input.query} latest trends and technology`;
+    
+    let lastError: any = null;
+    
+    // Loop through each API key, only moving to the next one if the current one fails.
+    for (const apiKey of apiKeys) {
+        try {
+            const [indianResults, globalResults] = await Promise.all([
+                performSearchWithKey(indianNewsQuery, 'in', 20, apiKey),
+                performSearchWithKey(globalTrendsQuery, 'us', 10, apiKey)
+            ]);
+
+            const combinedResults = [...indianResults, ...globalResults];
+
+            if (combinedResults.length === 0) {
+                return {
+                    results: [
+                        {
+                            title: 'No results found',
+                            link: `https://www.google.com/search?q=${encodeURIComponent(input.query)}`,
+                            snippet: `Your search - ${input.query} - did not match any documents. Please try a different query.`,
+                            position: 1,
+                        },
+                    ],
+                };
+            }
+            
+            // Success! Remove duplicates and return the unique results.
+            const uniqueResults = Array.from(new Map(combinedResults.map(item => [item.link, item])).values());
+            return { results: uniqueResults };
+
+        } catch (error: any) {
+            lastError = error;
+            // If the error is a key-related issue, the loop will continue to the next key.
+            // Otherwise, we break and throw the error.
+            if (![401, 403, 429].includes(error.status)) {
+                 console.error('A non-recoverable error occurred in the webSearch tool:', error);
+                 // Re-throw to be caught by the final catch block
+                 throw error;
+            }
+        }
+    }
+
+    // This block is reached only if all API keys have failed.
+    console.error(`All Serper API keys failed. Last error:`, lastError);
+    return {
+        results: [
+        {
+            title: 'Search Failed',
+            link: '#',
+            snippet: 'The web search failed because all available API keys are exhausted or invalid. Please check the server logs.',
+            position: 1,
+        },
+        ],
+    };
   }
 );
