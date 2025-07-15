@@ -13,17 +13,6 @@ interface FallbackGenerateInput {
   json?: boolean;
 }
 
-// Groq SDK is initialized once and reused.
-// It will automatically use the GROQ_API_KEY environment variable.
-let groq: Groq | null = null;
-if (process.env.GROQ_API_KEY) {
-    try {
-        groq = new Groq();
-    } catch (error) {
-        console.error("Failed to initialize Groq SDK:", error);
-    }
-}
-
 async function tryMistral(input: FallbackGenerateInput): Promise<string | null> {
     const mistralApiKey = process.env.MISTRAL_API_KEY;
     if (!mistralApiKey) {
@@ -71,8 +60,9 @@ async function tryMistral(input: FallbackGenerateInput): Promise<string | null> 
 
 
 async function tryGroq(input: FallbackGenerateInput): Promise<string | null> {
-    if (!groq) {
-        console.log("Groq API key not configured. Skipping Groq fallback.");
+    const apiKeys = (process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY || '').split(',').map(k => k.trim()).filter(Boolean);
+    if (apiKeys.length === 0) {
+        console.log("Groq API key(s) not configured. Skipping Groq fallback.");
         return null;
     }
     
@@ -87,30 +77,38 @@ async function tryGroq(input: FallbackGenerateInput): Promise<string | null> {
       return null;
     }
 
-    for (const model of modelsToTry) {
-        try {
-            console.log(`Attempting fallback with Groq model: ${model}`);
-            const chatCompletion = await groq.chat.completions.create({
-                messages: messages.map(({role, content}) => ({role, content})),
-                model: model,
-                temperature: 0.7,
-                max_tokens: 1024,
-                top_p: 1,
-                stream: false,
-                response_format: json ? { type: 'json_object' } : undefined,
-            });
-            
-            const content = chatCompletion.choices[0]?.message?.content;
-            if (content) {
-                console.log(`Successfully received response from Groq model: ${model}`);
-                return content;
+    for (const apiKey of apiKeys) {
+        const groq = new Groq({ apiKey });
+        for (const model of modelsToTry) {
+            try {
+                console.log(`Attempting fallback with Groq model: ${model}`);
+                const chatCompletion = await groq.chat.completions.create({
+                    messages: messages.map(({role, content}) => ({role, content})),
+                    model: model,
+                    temperature: 0.7,
+                    max_tokens: 1024,
+                    top_p: 1,
+                    stream: false,
+                    response_format: json ? { type: 'json_object' } : undefined,
+                });
+                
+                const content = chatCompletion.choices[0]?.message?.content;
+                if (content) {
+                    console.log(`Successfully received response from Groq model: ${model}`);
+                    return content; // Success, exit the loops
+                }
+            } catch (error) {
+                 if (error instanceof Groq.APIError && (error.status === 401 || error.status === 429)) {
+                    console.warn(`Groq API key ending in ...${apiKey.slice(-4)} failed with status ${error.status}. Trying next model/key.`);
+                    // Let it continue to the next model or key
+                 } else {
+                    console.error(`Error calling Groq API with ${model}:`, error);
+                 }
             }
-        } catch (error) {
-            console.error(`Error calling Groq API with ${model}:`, error);
         }
     }
     
-    console.log("All Groq fallback models failed.");
+    console.log("All Groq fallback models and keys failed.");
     return null;
 }
 
