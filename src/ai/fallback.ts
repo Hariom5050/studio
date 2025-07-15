@@ -158,6 +158,11 @@ export async function fallbackGenerate(input: FallbackGenerateInput): Promise<st
         { name: 'Kimi', apiKey: process.env.KIMI_API_KEY, model: 'kimi/kimi-dev-72b' },
         { name: 'Moonshot', apiKey: process.env.MOONSHOT_API_KEY, model: 'moonshot/moonshot-v1-32k' },
         { name: 'Sarvam', apiKey: process.env.SARVAM_API_KEY, model: 'sarvam/sarvam-m' },
+        { name: 'Dolphin Mistral', apiKey: process.env.DOLPHIN_MISTRAL_API_KEY, model: 'cognitivecomputations/dolphin-mistral-24b-venice-edition' },
+        { name: 'Tencent Hunyuan', apiKey: process.env.TENCENT_HUNYUAN_API_KEY, model: 'tencent/hunyuan-a13b-instruct' },
+        { name: 'Microsoft MAI', apiKey: process.env.MICROSOFT_MAI_API_KEY, model: 'microsoft/mai-ds-r1' },
+        { name: 'Qwen 235B', apiKey: process.env.QWEN_235B_API_KEY, model: 'qwen/qwen3-235b-a22b' },
+        { name: 'Qwen 4B', apiKey: process.env.QWEN_4B_API_KEY, model: 'qwen/qwen3-4b' },
     ];
 
     for (const modelConfig of openRouterFallbacks) {
