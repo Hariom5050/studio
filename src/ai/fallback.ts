@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A centralized fallback function to call various LLM APIs.
- * It now prioritizes Mistral AI and then falls back to Groq.
+ * It now prioritizes Groq and then falls back to Mistral AI.
  */
 import Groq from 'groq-sdk';
 import type { Message } from '@/lib/types';
@@ -116,16 +116,16 @@ async function tryGroq(input: FallbackGenerateInput): Promise<string | null> {
 
 
 export async function fallbackGenerate(input: FallbackGenerateInput): Promise<string> {
-  const mistralResponse = await tryMistral(input);
-  if (mistralResponse) {
-    return mistralResponse;
-  }
-
   const groqResponse = await tryGroq(input);
   if (groqResponse) {
     return groqResponse;
   }
+
+  const mistralResponse = await tryMistral(input);
+  if (mistralResponse) {
+    return mistralResponse;
+  }
   
   // If all fallbacks fail
-  throw new Error('All fallback services (Mistral, Groq) failed.');
+  throw new Error('All fallback services (Groq, Mistral) failed.');
 }
