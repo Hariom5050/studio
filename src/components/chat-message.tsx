@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Message } from "@/lib/types";
@@ -49,7 +50,7 @@ export function ChatMessage({ message, onPledgeSelect }: ChatMessageProps) {
         {message.isLoading ? (
           <div className="flex items-center gap-2">
             <LoaderCircle className="w-4 h-4 animate-spin text-primary" />
-            <p className="leading-relaxed whitespace-pre-wrap font-body text-muted-foreground">{message.content}</p>
+            <p className="leading-relaxed whitespace-pre-wrap font-body text-muted-foreground animate-pulse">{message.content}</p>
           </div>
         ) : (
           <p className="leading-relaxed whitespace-pre-wrap font-body">{message.content}</p>

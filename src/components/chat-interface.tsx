@@ -101,9 +101,8 @@ export function ChatInterface() {
         },
         (error) => {
             console.warn("Geolocation denied:", error.message);
-            // Silently fail if location is denied, the user can still chat.
-             setMessages(prev => {
-                const updated = [...prev];
+            setMessages(prev => {
+                const updated = [...prev, { id: crypto.randomUUID(), role: 'assistant', content: "I couldn't fetch a tip for your location right now, but a general one is to reduce single-use plastics!" }];
                 saveConversation(newConvoId, updated, []);
                 return updated;
             });
@@ -204,7 +203,7 @@ export function ChatInterface() {
     const loadingAssistantMessage: Message = {
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: "Thank you for your patience! Your response is being generated.",
+      content: "Generating...",
       isLoading: true,
     };
     const newMessages = [...messages, tempUserMessage, loadingAssistantMessage];
